@@ -73,12 +73,12 @@ export default function KitaabApp() {
                             <RichTextPlugin
                                 contentEditable={
                                     <ContentEditable
-                                        className="writing-area min-h-full outline-none px-10 md:px-24 py-12 text-lg font-mono text-neutral-500 focus:text-[var(--foreground)] transition-colors max-w-3xl mx-auto"
+                                        className="writing-area min-h-full outline-none px-10 md:px-24 py-12 text-lg text-neutral-500 focus:text-[var(--foreground)] transition-colors max-w-3xl mx-auto"
                                     />
                                 }
                                 placeholder={
                                     <div className="absolute top-12 left-0 right-0 px-10 md:px-24 pointer-events-none select-none max-w-3xl mx-auto">
-                                        <span className="text-neutral-400 text-lg font-mono">Start typing here...</span>
+                                        <span className="text-neutral-400 text-lg opacity-50">Start typing here...</span>
                                     </div>
                                 }
                                 ErrorBoundary={LexicalErrorBoundary}
@@ -124,25 +124,29 @@ function StatusIndicator() {
     const [status, setStatus] = useState<'offline' | 'online'>('offline');
 
     useEffect(() => {
-        // Check settings for key
-        const checkStatus = async () => {
-            // We can't easily import loadSettings here if it's not exported or if it's async in a sync render.
-            // But we can check localStorage directly for 'kitaab-settings'.
-            // "Offline" means no API key? Or just not connected? 
-            // Let's assume Offline until we verify a key exists.
+        const checkStatus = () => {
             try {
                 const stored = localStorage.getItem('kitaab-settings');
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    if (parsed.apiKey) setStatus('online');
+                    if (parsed.apiKey) {
+                        setStatus('online');
+                        return;
+                    }
                 }
-            } catch (e) { }
+                setStatus('offline');
+            } catch (e) {
+                setStatus('offline');
+            }
         };
 
         checkStatus();
-        // Listen for storage events to update status?
         window.addEventListener('storage', checkStatus);
-        return () => window.removeEventListener('storage', checkStatus);
+        window.addEventListener('kitaab-settings-changed', checkStatus); // Custom event
+        return () => {
+            window.removeEventListener('storage', checkStatus);
+            window.removeEventListener('kitaab-settings-changed', checkStatus);
+        };
     }, []);
 
     return (

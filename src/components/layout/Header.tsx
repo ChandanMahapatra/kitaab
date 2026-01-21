@@ -7,6 +7,8 @@ import { Bold, Italic, List, Link as LinkIcon, Settings, Share, AlignJustify, Li
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
+import { INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list";
+import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 
 interface HeaderProps {
     title?: string;
@@ -66,6 +68,17 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
     };
 
+    const insertLink = () => {
+        const url = prompt("Enter URL:", "https://");
+        if (url) {
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
+        }
+    };
+
+    const insertList = () => {
+        editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+    };
+
     const handleExport = (type: 'md' | 'html' | 'pdf') => {
         editor.read(() => {
             const markdown = $convertToMarkdownString(TRANSFORMERS);
@@ -99,10 +112,10 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                             <button type="button" onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic">
                                 <Italic className="w-4 h-4" />
                             </button>
-                            <button type="button" className={buttonClass} aria-label="Unordered List">
+                            <button type="button" onClick={insertList} className={buttonClass} aria-label="Unordered List">
                                 <List className="w-4 h-4" />
                             </button>
-                            <button type="button" className={buttonClass} aria-label="Link">
+                            <button type="button" onClick={insertLink} className={buttonClass} aria-label="Link">
                                 <LinkIcon className="w-4 h-4" />
                             </button>
                         </div>

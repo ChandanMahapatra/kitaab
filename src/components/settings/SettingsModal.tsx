@@ -39,6 +39,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         if (!provider) {
             // Just save if no provider selected (clearing)
             await saveSettings({ provider: undefined, apiKey: undefined, model: undefined, baseURL: undefined });
+            window.dispatchEvent(new Event('kitaab-settings-changed'));
             onOpenChange(false);
             return;
         }
@@ -56,6 +57,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             setStatus('success');
             setMessage("Connected successfully!");
             await saveSettings({ provider, apiKey, model, baseURL });
+            window.dispatchEvent(new Event('kitaab-settings-changed'));
             setTimeout(() => onOpenChange(false), 1000);
         } else {
             setStatus('error');
