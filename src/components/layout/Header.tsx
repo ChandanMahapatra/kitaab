@@ -1,10 +1,8 @@
-"use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { FORMAT_TEXT_COMMAND, TextFormatType } from "lexical";
-import { Bold, Italic, List, Link as LinkIcon, Settings, Share, AlignJustify, ListOrdered, Eye, Edit3, FileText, FileCode, FileType } from "lucide-react";
+import { Bold, Italic, List, Link as LinkIcon, Settings, Share, AlignJustify, ListOrdered, Eye, Edit3, FileText, FileCode, FileType, Moon, Sun } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
@@ -12,11 +10,30 @@ import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
 interface HeaderProps {
     isPreview?: boolean;
     onTogglePreview?: () => void;
+    title?: string;
+    setTitle?: (title: string) => void;
 }
 
-export function Header({ isPreview, onTogglePreview }: HeaderProps) {
+export function Header({ isPreview, onTogglePreview, title = "Untitled", setTitle }: HeaderProps) {
     const [editor] = useLexicalComposerContext();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        // Init dark mode from html class or system preference
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        setIsDark(isDarkMode);
+    }, []);
+
+    const toggleDarkMode = () => {
+        if (isDark) {
+            document.documentElement.classList.remove('dark');
+            setIsDark(false);
+        } else {
+            document.documentElement.classList.add('dark');
+            setIsDark(true);
+        }
+    };
 
     const formatText = (format: TextFormatType) => {
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
@@ -25,8 +42,6 @@ export function Header({ isPreview, onTogglePreview }: HeaderProps) {
     const handleExport = (type: 'md' | 'html' | 'pdf') => {
         editor.read(() => {
             const markdown = $convertToMarkdownString(TRANSFORMERS);
-            const title = "Untitled Draft"; // Could be dynamic later
-
             if (type === 'md') exportToMarkdown(title, markdown);
             if (type === 'html') exportToHTML(title, markdown);
             if (type === 'pdf') exportToPDF(title, markdown);
@@ -42,20 +57,26 @@ export function Header({ isPreview, onTogglePreview }: HeaderProps) {
                     <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg cursor-default">K</div>
 
                     <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Untitled draft</span>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle?.(e.target.value)}
+                            className="text-sm font-medium text-neutral-500 dark:text-neutral-400 bg-transparent border-none outline-none hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors w-48"
+                            placeholder="Untitled draft"
+                        />
 
                         {!isPreview && (
                             <div className="flex items-center gap-1 h-6 pl-4 border-l border-neutral-200 dark:border-neutral-800">
-                                <button onClick={() => formatText("bold")} className={buttonClass} aria-label="Bold">
+                                <button type="button" onClick={() => formatText("bold")} className={buttonClass} aria-label="Bold">
                                     <Bold className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic">
+                                <button type="button" onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic">
                                     <Italic className="w-4 h-4" />
                                 </button>
-                                <button className={buttonClass} aria-label="Unordered List">
+                                <button type="button" className={buttonClass} aria-label="Unordered List">
                                     <List className="w-4 h-4" />
                                 </button>
-                                <button className={buttonClass} aria-label="Link">
+                                <button type="button" className={buttonClass} aria-label="Link">
                                     <LinkIcon className="w-4 h-4" />
                                 </button>
                             </div>
@@ -64,6 +85,14 @@ export function Header({ isPreview, onTogglePreview }: HeaderProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleDarkMode}
+                        className={buttonClass}
+                        aria-label="Toggle Dark Mode"
+                    >
+                        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    </button>
+
                     {onTogglePreview && (
                         <button
                             onClick={onTogglePreview}

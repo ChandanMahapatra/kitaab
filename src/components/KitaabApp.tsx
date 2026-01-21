@@ -58,13 +58,14 @@ export default function KitaabApp() {
     const [isPreview, setIsPreview] = useState(false);
     const [previewContent, setPreviewContent] = useState("");
     const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+    const [docTitle, setDocTitle] = useState("Untitled draft");
 
     // We need a plugin/component to extract content for preview when toggled
     const PreviewHandler = () => {
         const [editor] = useLexicalComposerContext();
         useEffect(() => {
             if (isPreview) {
-                editor.update(() => {
+                editor.getEditorState().read(() => {
                     const md = $convertToMarkdownString(TRANSFORMERS);
                     setPreviewContent(mdParser.render(md));
                 });
@@ -77,7 +78,12 @@ export default function KitaabApp() {
         <LexicalComposer initialConfig={editorConfig}>
             <div className="flex h-screen overflow-hidden flex-col bg-background-light dark:bg-background-dark text-neutral-800 dark:text-neutral-200 transition-colors duration-200">
 
-                <Header isPreview={isPreview} onTogglePreview={() => setIsPreview(!isPreview)} />
+                <Header
+                    isPreview={isPreview}
+                    onTogglePreview={() => setIsPreview(!isPreview)}
+                    title={docTitle}
+                    setTitle={setDocTitle}
+                />
 
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark relative">

@@ -7,7 +7,7 @@ import { $createIssueNode, IssueNode, $isIssueNode } from "@/components/editor/n
 
 // Regexes (Must match analysis.ts basically)
 const ADVERB_REGEX = /\b\w+ly\b/gi;
-const PASSIVE_REGEX = /\b(is|are|was|were|be|been|being)\s+(\w+ed|\w+en)\b/gi;
+const PASSIVE_REGEX = /\b(is|are|was|were|be|been|being)\s+(\w+ed|\w+en|\w+wn)\b/gi;
 const QUALIFIER_REGEX = /\b(I think|we think|I believe|we believe|maybe|perhaps|possibly|probably|I guess|we guess|kind of|sort of|a bit|a little|really|extremely|incredibly)\b/gi;
 
 function findMatchIndex(text: string, regex: RegExp): { start: number, end: number, match: string } | null {
@@ -63,11 +63,11 @@ export function IssueHighlighterPlugin() {
 
                 let targetNode;
                 if (start === 0) {
-                    const [foundNode, restNode] = textNode.splitText(end);
-                    targetNode = foundNode;
+                    const split = textNode.splitText(end);
+                    targetNode = split[0];
                 } else {
-                    const [prefixNode, foundNode, restNode] = textNode.splitText(start, end);
-                    targetNode = foundNode;
+                    const split = textNode.splitText(start, end);
+                    targetNode = split[1];
                 }
 
                 const issueNode = $createIssueNode(matchText, type);

@@ -117,11 +117,18 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                 {/* Gauge */}
                 <div className="flex flex-col items-center justify-center py-4 bg-neutral-50 dark:bg-neutral-900/40 rounded-lg border border-neutral-200 dark:border-neutral-800 mb-6">
                     <div className="relative w-32 h-16 overflow-hidden">
-                        <div className="absolute top-0 left-0 w-32 h-32 border-[10px] border-neutral-200 dark:border-neutral-800 rounded-full"></div>
-                        <div
-                            className="absolute top-0 left-0 w-32 h-32 border-[10px] border-primary rounded-full transition-transform duration-500 ease-out origin-bottom"
-                            style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)', transform: `rotate(${gaugeRotation}deg)` }}
-                        ></div>
+                        <svg viewBox="0 0 100 50" className="w-full h-full">
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" stroke="#e5e7eb" fill="none" className="dark:stroke-neutral-700" />
+                            <path
+                                d="M 10 50 A 40 40 0 0 1 90 50"
+                                strokeWidth="10"
+                                stroke="currentColor"
+                                fill="none"
+                                className="text-primary transition-all duration-1000 ease-out"
+                                strokeDasharray="125.6"
+                                strokeDashoffset={125.6 - (125.6 * (score / 100))}
+                            />
+                        </svg>
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
                             <span className="text-2xl font-bold leading-none text-neutral-700 dark:text-neutral-200">{score}</span>
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase">Score</span>
