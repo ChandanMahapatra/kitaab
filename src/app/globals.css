@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Lato', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  
+  --color-primary: #546e7a;
+  
+  --color-background-light: #f5f5f5;
+  --color-background-dark: #121212;
+  
+  --color-sidebar-light: #eeeeee;
+  --color-sidebar-dark: #1a1a1a;
+  
+  --color-muted-red: #e57373;
+  --color-muted-amber: #ffb74d;
+  --color-muted-purple: #ba68c8;
+  --color-muted-blue: #64b5f6;
+  --color-muted-emerald: #81c784;
+}
+
+:root {
+  --background: var(--color-background-light);
+  --foreground: #171717;
+}
+
+.dark {
+  --background: var(--color-background-dark);
+  --foreground: #ededed;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+}
+
+/* Custom Utilities for Issue Highlighting */
+.issue-highlight-yellow { background-color: rgba(255, 183, 77, 0.15); border-bottom: 2px solid #ffb74d; }
+.issue-highlight-red { background-color: rgba(229, 115, 115, 0.15); border-bottom: 2px solid #e57373; }
+.issue-highlight-purple { background-color: rgba(186, 104, 200, 0.15); border-bottom: 2px solid #ba68c8; }
+.issue-highlight-blue { background-color: rgba(100, 181, 246, 0.15); border-bottom: 2px solid #64b5f6; }
