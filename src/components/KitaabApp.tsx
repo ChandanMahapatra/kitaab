@@ -26,7 +26,9 @@ import { DebouncedAutoSavePlugin } from "@/components/editor/plugins/AutoSavePlu
 import { ContentInitializationPlugin } from "@/components/editor/plugins/ContentInitializationPlugin";
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
 import { AnalysisPlugin } from "@/components/editor/plugins/AnalysisPlugin";
+import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlighterPlugin";
 import { AnalysisResult } from "@/lib/analysis";
+import { IssueNode } from "@/components/editor/nodes/IssueNode";
 
 const editorConfig = {
     namespace: "KitaabEditor",
@@ -46,6 +48,7 @@ const editorConfig = {
         TableRowNode,
         LinkNode,
         AutoLinkNode,
+        IssueNode,
     ],
 };
 
@@ -107,6 +110,7 @@ export default function KitaabApp() {
                                     <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                                     <DebouncedAutoSavePlugin />
                                     <ContentInitializationPlugin />
+                                    <IssueHighlighterPlugin />
                                     <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
                                     <PreviewHandler />
                                 </>
