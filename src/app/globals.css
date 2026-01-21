@@ -3,15 +3,15 @@
 @theme {
   --font-display: 'Lato', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
-  
+
   --color-primary: #546e7a;
-  
+
   --color-background-light: #f5f5f5;
   --color-background-dark: #121212;
-  
+
   --color-sidebar-light: #eeeeee;
   --color-sidebar-dark: #1a1a1a;
-  
+
   --color-muted-red: #e57373;
   --color-muted-amber: #ffb74d;
   --color-muted-purple: #ba68c8;
@@ -19,14 +19,58 @@
   --color-muted-emerald: #81c784;
 }
 
+/* Base Theme (Default Light/Dark via System or Class) */
 :root {
   --background: var(--color-background-light);
   --foreground: #171717;
+  --sidebar-bg: var(--color-sidebar-light);
+  --border-color: #e5e5e5;
+  --scrollbar-thumb: #d4d4d4;
+  --scrollbar-track: transparent;
 }
 
 .dark {
   --background: var(--color-background-dark);
   --foreground: #ededed;
+  --sidebar-bg: var(--color-sidebar-dark);
+  --border-color: #262626;
+  --scrollbar-thumb: #404040;
+}
+
+/* Sepia Theme */
+[data-theme='sepia'] {
+  --background: #fdf6e3;
+  --foreground: #433422;
+  --sidebar-bg: #eee8d5;
+  --border-color: #d3cbb7;
+  --color-primary: #b58900;
+  --scrollbar-thumb: #d3cbb7;
+  font-family: 'Merriweather', serif;
+  /* Override font */
+}
+
+[data-theme='sepia'] .font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Grey Minimal Theme */
+[data-theme='grey'] {
+  --background: #f3f4f6;
+  --foreground: #111827;
+  --sidebar-bg: #e5e7eb;
+  --border-color: #d1d5db;
+  --color-primary: #4b5563;
+  --scrollbar-thumb: #9ca3af;
+  font-family: 'Inter', sans-serif;
+}
+
+[data-theme='grey'].dark {
+  --background: #111827;
+  --foreground: #f9fafb;
+  --sidebar-bg: #1f2937;
+  --border-color: #374151;
+  --color-primary: #9ca3af;
+  --scrollbar-thumb: #4b5563;
 }
 
 body {
@@ -35,8 +79,44 @@ body {
   font-family: var(--font-display);
 }
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary);
+}
+
 /* Custom Utilities for Issue Highlighting */
-.issue-highlight-yellow { background-color: rgba(255, 183, 77, 0.15); border-bottom: 2px solid #ffb74d; }
-.issue-highlight-red { background-color: rgba(229, 115, 115, 0.15); border-bottom: 2px solid #e57373; }
-.issue-highlight-purple { background-color: rgba(186, 104, 200, 0.15); border-bottom: 2px solid #ba68c8; }
-.issue-highlight-blue { background-color: rgba(100, 181, 246, 0.15); border-bottom: 2px solid #64b5f6; }
+.issue-highlight-yellow {
+  background-color: rgba(255, 183, 77, 0.3) !important;
+  border-bottom: 2px solid #ffb74d !important;
+}
+
+.issue-highlight-red {
+  background-color: rgba(229, 115, 115, 0.3) !important;
+  border-bottom: 2px solid #e57373 !important;
+}
+
+.issue-highlight-purple {
+  background-color: rgba(186, 104, 200, 0.3) !important;
+  border-bottom: 2px solid #ba68c8 !important;
+}
+
+.issue-highlight-blue {
+  background-color: rgba(100, 181, 246, 0.3) !important;
+  border-bottom: 2px solid #64b5f6 !important;
+  text-decoration: none !important;
+  /* Prevent conflicts */
+}

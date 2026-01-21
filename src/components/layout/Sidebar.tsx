@@ -104,9 +104,9 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
     };
 
     return (
-        <aside className="w-80 border-l border-neutral-200 dark:border-neutral-800 flex flex-col bg-sidebar-light dark:bg-sidebar-dark h-full">
+        <aside className="w-80 border-l border-[var(--border-color)] flex flex-col bg-[var(--sidebar-bg)] h-full transition-colors duration-300">
             {/* Top Section: Analysis Score */}
-            <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="p-6 border-b border-[var(--border-color)]">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Analysis</h2>
                     <span className="flex items-center gap-1 text-[10px] font-bold text-muted-emerald border border-muted-emerald/30 px-1.5 py-0.5 rounded">
@@ -115,10 +115,10 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                 </div>
 
                 {/* Gauge */}
-                <div className="flex flex-col items-center justify-center py-4 bg-neutral-50 dark:bg-neutral-900/40 rounded-lg border border-neutral-200 dark:border-neutral-800 mb-6">
+                <div className="flex flex-col items-center justify-center py-4 bg-[var(--background)] rounded-lg border border-[var(--border-color)] mb-6 shadow-sm">
                     <div className="relative w-32 h-16 overflow-hidden">
                         <svg viewBox="0 0 100 50" className="w-full h-full">
-                            <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" stroke="#e5e7eb" fill="none" className="dark:stroke-neutral-700" />
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" fill="none" className="transition-colors" style={{ stroke: 'var(--border-color)' }} />
                             <path
                                 d="M 10 50 A 40 40 0 0 1 90 50"
                                 strokeWidth="10"
@@ -130,7 +130,7 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                             />
                         </svg>
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                            <span className="text-2xl font-bold leading-none text-neutral-700 dark:text-neutral-200">{score}</span>
+                            <span className="text-2xl font-bold leading-none text-[var(--foreground)]">{score}</span>
                             <span className="text-[10px] text-neutral-500 font-semibold uppercase">Score</span>
                         </div>
                     </div>
@@ -146,13 +146,13 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-neutral-500">Flesch Score</span>
-                        <span className="font-bold text-neutral-600 dark:text-neutral-300">{fleschScore}</span>
+                        <span className="font-bold text-[var(--foreground)] opacity-80">{fleschScore}</span>
                     </div>
                 </div>
             </div>
 
             {/* Issues Section */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
                 <h3 className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Writing Issues</h3>
                 {Object.keys(issuesByType).length === 0 && !evaluation && (
                     <div className="text-xs text-neutral-400 text-center py-8">
@@ -227,15 +227,23 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                 <button
                     onClick={handleAnalyze}
                     disabled={isEvaluating}
-                    className="w-full py-3 bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black hover:opacity-90 rounded text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group w-full py-3 bg-transparent border border-[var(--border-color)] text-[var(--foreground)] hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:text-white rounded text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                     {isEvaluating ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
-                        <Zap className="w-3 h-3" />
+                        <Zap className="w-3 h-3 text-[var(--color-primary)] group-hover:text-white transition-colors" />
                     )}
                     {isEvaluating ? 'ANALYZING...' : 'ANALYZE WITH AI'}
                 </button>
+
+                {analysis && (
+                    <div className="mt-2 text-center">
+                        <span className="text-[10px] text-neutral-400">
+                            Est. Cost: ~{Math.ceil(analysis.charCount / 4)} tokens
+                        </span>
+                    </div>
+                )}
             </div>
         </aside>
     );
