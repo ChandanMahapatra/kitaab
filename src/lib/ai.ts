@@ -37,6 +37,33 @@ export interface EvaluationResult {
         overall: number;
     };
     suggestions: string[];
+    tokensUsed?: number;
+    cost?: number;
+}
+
+export interface TokenUsage {
+    tokensUsed: number;
+    cost: number;
+}
+
+const MODEL_PRICING: Record<string, { inputPer1K: number; outputPer1K: number }> = {
+    'gpt-4': { inputPer1K: 0.03, outputPer1K: 0.06 },
+    'gpt-3.5-turbo': { inputPer1K: 0.0005, outputPer1K: 0.0015 },
+    'gpt-4o': { inputPer1K: 0.0025, outputPer1K: 0.01 },
+    'anthropic/claude-3.5-sonnet': { inputPer1K: 0.003, outputPer1K: 0.015 },
+    'anthropic/claude-3-sonnet-20240229': { inputPer1K: 0.003, outputPer1K: 0.015 },
+    'anthropic/claude-3-haiku-20240307': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
+    'google/gemini-pro-1.5': { inputPer1K: 0.000125, outputPer1K: 0.0005 },
+};
+
+function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
+    const pricing = MODEL_PRICING[model];
+    if (!pricing) {
+        return 0;
+    }
+    const inputCost = (inputTokens / 1000) * pricing.inputPer1K;
+    const outputCost = (outputTokens / 1000) * pricing.outputPer1K;
+    return inputCost + outputCost;
 }
 
 export async function testConnection(providerId: string, apiKey: string, baseURL?: string): Promise<boolean> {
@@ -56,16 +83,13 @@ export async function testConnection(providerId: string, apiKey: string, baseURL
             });
             return response.ok;
         } else if (providerId === 'anthropic') {
-            // Anthropic requires a dummy message or model list. Model list is safest.
-            // Note: Anthropic client-side calls might be CORS blocked depending on browser/proxy.
-            // We will try a very small message generation.
             const response = await fetch(`${effectiveBaseURL}/v1/messages`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01',
-                    'dangerously-allow-browser': 'true' // Client-side specific header if using some proxies, but standard API might ignore
+                    'dangerously-allow-browser': 'true'
                 },
                 body: JSON.stringify({
                     model: 'claude-3-haiku-20240307',
@@ -75,13 +99,15 @@ export async function testConnection(providerId: string, apiKey: string, baseURL
             });
             return response.ok;
         } else if (providerId === 'openrouter') {
-            const response = await fetch(`${effectiveBaseURL}/models`, {
+            const response = await fetch(`${effectiveBaseURL}/auth/key`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`,
                 },
             });
+            if (response.status === 401) {
+                return false;
+            }
             return response.ok;
         }
     } catch (e) {
@@ -119,6 +145,8 @@ Text:
 ${text}`;
 
     let content = "";
+    let inputTokens = 0;
+    let outputTokens = 0;
 
     try {
         if (providerId === 'openai' || providerId === 'openrouter') {
@@ -145,6 +173,8 @@ ${text}`;
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const data = await response.json();
             content = data.choices?.[0]?.message?.content || '';
+            inputTokens = data.usage?.prompt_tokens || 0;
+            outputTokens = data.usage?.completion_tokens || 0;
 
         } else if (providerId === 'anthropic') {
             const response = await fetch(`${effectiveBaseURL}/v1/messages`, {
@@ -166,13 +196,23 @@ ${text}`;
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const data = await response.json();
             content = data.content?.[0]?.text || '';
+            inputTokens = data.usage?.input_tokens || 0;
+            outputTokens = data.usage?.output_tokens || 0;
         }
     } catch (error) {
         console.error("Evaluation failed", error);
         throw error;
     }
 
-    return parseEvaluationResponse(content);
+    const result = parseEvaluationResponse(content);
+    const tokensUsed = inputTokens + outputTokens;
+    const cost = calculateCost(model, inputTokens, outputTokens);
+
+    return {
+        ...result,
+        tokensUsed,
+        cost: parseFloat(cost.toFixed(6)),
+    };
 }
 
 function parseEvaluationResponse(response: string): EvaluationResult {
@@ -192,8 +232,9 @@ function parseEvaluationResponse(response: string): EvaluationResult {
             overall = parseInt(line.split(':')[1]?.trim() || '0') || 0;
         } else if (lower.startsWith('suggestions:')) {
             inSuggestions = true;
-        } else if (inSuggestions && line.startsWith('-')) {
-            suggestions.push(line.substring(1).trim());
+        } else if (inSuggestions && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
+            const suggestion = line.replace(/^[-•\d]+\.\s*/, '').trim();
+            if (suggestion) suggestions.push(suggestion);
         }
     }
 
@@ -203,6 +244,6 @@ function parseEvaluationResponse(response: string): EvaluationResult {
             clarity: Math.min(100, Math.max(0, clarity)),
             overall: Math.min(100, Math.max(0, overall))
         },
-        suggestions: suggestions.slice(0, 3), // Limit to 3
+        suggestions: suggestions.slice(0, 3),
     };
 }

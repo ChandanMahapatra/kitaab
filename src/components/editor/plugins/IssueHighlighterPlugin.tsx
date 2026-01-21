@@ -2,12 +2,11 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect } from "react";
-import { TextNode, $createTextNode, $isTextNode } from "lexical";
+import { TextNode } from "lexical";
 import { $createIssueNode, IssueNode, $isIssueNode } from "@/components/editor/nodes/IssueNode";
 
-// Regexes (Must match analysis.ts basically)
 const ADVERB_REGEX = /\b\w+ly\b/gi;
-const PASSIVE_REGEX = /\b(is|are|was|were|be|been|being)\s+(\w+ed|\w+en|\w+wn)\b/gi;
+const PASSIVE_REGEX = /\b(is|are|was|were|be|been|being)\s+(\w+ed|\w+en)\b/gi;
 const QUALIFIER_REGEX = /\b(I think|we think|I believe|we believe|maybe|perhaps|possibly|probably|I guess|we guess|kind of|sort of|a bit|a little|really|extremely|incredibly)\b/gi;
 
 function findMatchIndex(text: string, regex: RegExp): { start: number, end: number, match: string } | null {
@@ -27,17 +26,11 @@ export function IssueHighlighterPlugin() {
             throw new Error("IssueHighlighterPlugin: IssueNode not registered on editor");
         }
 
-        // Simplistic transform: Scan text nodes, find matches, split text node.
-        // This is computationally expensive on every update, ideally stick to debounce or transforms.
-        // Lexical Transform is better.
-
         return editor.registerNodeTransform(TextNode, (textNode) => {
-            if ($isIssueNode(textNode)) return; // Don't re-transform issues
+            if ($isIssueNode(textNode)) return;
 
             const text = textNode.getTextContent();
 
-            // Priority: Adverbs > Passive > Qualifiers
-            // 1. Adverbs
             let match = findMatchIndex(text, ADVERB_REGEX);
             let type = 'adverb';
 
@@ -54,7 +47,6 @@ export function IssueHighlighterPlugin() {
             if (match) {
                 const { start, end, match: matchText } = match;
 
-                // Check exceptions for adverbs if type is adverb
                 if (type === 'adverb') {
                     const word = matchText.toLowerCase();
                     const exceptions = ['family', 'only', 'july', 'reply', 'supply', 'apply', 'belly', 'jelly', 'rally', 'ally'];
@@ -71,7 +63,6 @@ export function IssueHighlighterPlugin() {
                 }
 
                 const issueNode = $createIssueNode(matchText, type);
-                // Copy format
                 issueNode.setFormat(targetNode.getFormat());
                 targetNode.replace(issueNode);
             }

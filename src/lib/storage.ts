@@ -14,6 +14,9 @@ interface Settings {
     model?: string;
     apiKey?: string;
     baseURL?: string;
+    tokensUsed?: number;
+    totalCost?: number;
+    hoverHighlightEnabled?: boolean;
 }
 
 interface KitaabDB extends DBSchema {

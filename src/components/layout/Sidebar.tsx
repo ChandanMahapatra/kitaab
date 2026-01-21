@@ -1,35 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
 import { evaluateText, EvaluationResult, providers } from "@/lib/ai";
-import { loadSettings } from "@/lib/storage";
-import { Zap, Loader2, CheckCircle2, AlertTriangle, MessageSquare } from "lucide-react";
+import { loadSettings, saveSettings } from "@/lib/storage";
+import { Zap, Loader2, AlertTriangle } from "lucide-react";
 
 interface SidebarProps {
     analysis: AnalysisResult | null;
     onHoverIssue?: (type: string | null) => void;
+    onHoverHighlightChange?: (type: string | null) => void;
+    onTokensUpdate?: (tokens: number) => void;
 }
 
-export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
+export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onTokensUpdate }: SidebarProps) {
     const [editor] = useLexicalComposerContext();
     const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hoverHighlightEnabled, setHoverHighlightEnabled] = useState(false);
 
-    // Safe defaults
     const score = analysis?.score ?? 100;
     const gradeLevel = analysis?.gradeLevel ?? 0;
     const fleschScore = analysis?.fleschScore ?? 0;
 
-    // Group issues
+    useEffect(() => {
+        const loadSettingsData = async () => {
+            const settings = await loadSettings();
+            setHoverHighlightEnabled(settings?.hoverHighlightEnabled ?? false);
+        };
+        loadSettingsData();
+    }, []);
+
     const issuesByType = analysis?.issues.reduce((acc, issue) => {
         if (!acc[issue.type]) acc[issue.type] = [];
         acc[issue.type].push(issue);
         return acc;
     }, {} as Record<string, Issue[]>) ?? {};
-
-    const gaugeRotation = (score / 100) * 180;
 
     const getIssueColor = (type: string) => {
         switch (type) {
@@ -50,6 +57,26 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
             case 'qualifier': return 'Weak Qualifiers';
             default: return type;
         }
+    };
+
+    const handleHoverEnter = (type: string) => {
+        onHoverIssue?.(type);
+        onHoverHighlightChange?.(hoverHighlightEnabled ? type : null);
+    };
+
+    const handleHoverLeave = () => {
+        onHoverIssue?.(null);
+        onHoverHighlightChange?.(null);
+    };
+
+    const toggleHoverHighlight = async () => {
+        const newValue = !hoverHighlightEnabled;
+        setHoverHighlightEnabled(newValue);
+        const settings = await loadSettings();
+        await saveSettings({
+            ...settings,
+            hoverHighlightEnabled: newValue,
+        });
     };
 
     const handleAnalyze = async () => {
@@ -95,6 +122,14 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
 
             setEvaluation(result);
 
+            const newTotalTokens = (settings.tokensUsed ?? 0) + (result.tokensUsed ?? 0);
+            onTokensUpdate?.(newTotalTokens);
+
+            await saveSettings({
+                ...settings,
+                tokensUsed: newTotalTokens,
+            });
+
         } catch (err) {
             console.error(err);
             setError(err instanceof Error ? err.message : "Analysis failed");
@@ -103,19 +138,22 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
         }
     };
 
+    const buttonClass = "px-4 py-1.5 text-xs font-semibold border border-[var(--border-color)] text-[var(--foreground)] bg-transparent hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:text-white rounded transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none flex items-center justify-center gap-2 w-full";
+
     return (
         <aside className="w-80 border-l border-[var(--border-color)] flex flex-col bg-[var(--sidebar-bg)] h-full transition-colors duration-300">
-            {/* Top Section: Analysis Score */}
-            <div className="p-6 border-b border-[var(--border-color)]">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Analysis</h2>
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-muted-emerald border border-muted-emerald/30 px-1.5 py-0.5 rounded">
-                        LIVE
-                    </span>
+            <div className="p-4 border-b border-[var(--border-color)]">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-bold uppercase tracking-widest opacity-60">Analysis</h2>
+                    <button
+                        onClick={toggleHoverHighlight}
+                        className="text-[10px] opacity-50 hover:opacity-100 transition-opacity"
+                    >
+                        {hoverHighlightEnabled ? 'Highlight: On' : 'Highlight: Off'}
+                    </button>
                 </div>
 
-                {/* Gauge */}
-                <div className="flex flex-col items-center justify-center py-4 bg-[var(--background)] rounded-lg border border-[var(--border-color)] mb-6 shadow-sm">
+                <div className="flex flex-col items-center justify-center py-3 bg-[var(--background)] rounded-lg border border-[var(--border-color)] mb-4 shadow-sm">
                     <div className="relative w-32 h-16 overflow-hidden">
                         <svg viewBox="0 0 100 50" className="w-full h-full">
                             <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" fill="none" className="transition-colors" style={{ stroke: 'var(--border-color)' }} />
@@ -131,83 +169,62 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                         </svg>
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
                             <span className="text-2xl font-bold leading-none text-[var(--foreground)]">{score}</span>
-                            <span className="text-[10px] text-neutral-500 font-semibold uppercase">Score</span>
+                            <span className="text-[10px] opacity-50 font-semibold uppercase">Score</span>
                         </div>
                     </div>
-                    <p className="text-xs font-medium text-neutral-400 mt-2">
+                    <p className="text-xs font-medium opacity-50 mt-2">
                         {score > 80 ? 'Good Readability' : score > 50 ? 'Needs Improvement' : 'Hard to Read'}
                     </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-neutral-500">Grade Level</span>
+                        <span className="opacity-50">Grade Level</span>
                         <span className="font-bold text-primary">Grade {gradeLevel}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-neutral-500">Flesch Score</span>
+                        <span className="opacity-50">Flesch Score</span>
                         <span className="font-bold text-[var(--foreground)] opacity-80">{fleschScore}</span>
                     </div>
                 </div>
             </div>
 
-            {/* Issues Section */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
-                <h3 className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Writing Issues</h3>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
+                <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-2">Writing Issues</h3>
                 {Object.keys(issuesByType).length === 0 && !evaluation && (
-                    <div className="text-xs text-neutral-400 text-center py-8">
+                    <div className="text-xs opacity-40 text-center py-6">
                         No issues detected. Good job!
                     </div>
                 )}
 
                 {Object.entries(issuesByType).map(([type, issues]) => {
                     const colorClass = `text-${getIssueColor(type)}`;
-                    const bgClass = `bg-${getIssueColor(type)}/10`;
-                    const borderClass = `border-${getIssueColor(type)}/20`;
 
                     return (
                         <div
                             key={type}
-                            className={`p-3 ${bgClass} border ${borderClass} rounded-lg group hover:border-${getIssueColor(type)}/40 transition-colors cursor-pointer`}
-                            onMouseEnter={() => onHoverIssue?.(type)}
-                            onMouseLeave={() => onHoverIssue?.(null)}
+                            className="p-3 border border-[var(--border-color)] rounded-lg hover:border-[var(--color-primary)] hover:bg-[var(--background)] transition-colors cursor-pointer"
+                            onMouseEnter={() => handleHoverEnter(type)}
+                            onMouseLeave={handleHoverLeave}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-xs font-bold ${colorClass} capitalize`}>{getIssueLabel(type)}</span>
-                                <span className={`text-xs font-bold ${colorClass} ${bgClass} px-1.5 rounded`}>{issues.length}</span>
+                                <span className={`text-xs font-bold capitalize ${hoverHighlightEnabled ? colorClass : 'opacity-60'}`}>{getIssueLabel(type)}</span>
+                                <span className={`text-xs font-bold ${hoverHighlightEnabled ? colorClass : 'opacity-40'} px-1.5 rounded`}>{issues.length}</span>
                             </div>
                             {issues[0]?.suggestion && (
-                                <p className="text-[11px] text-neutral-500">{issues[0].suggestion}</p>
+                                <p className="text-[11px] opacity-40">{issues[0].suggestion}</p>
                             )}
                         </div>
                     );
                 })}
 
-                {/* AI Evaluation Results */}
-                {evaluation && (
-                    <div className="mt-6 border-t border-neutral-200 dark:border-neutral-800 pt-6">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-4">AI Feedback</h3>
-
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                            <div className="text-center p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
-                                <div className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{evaluation.scores.grammar}</div>
-                                <div className="text-[9px] text-neutral-400 uppercase">Grammar</div>
-                            </div>
-                            <div className="text-center p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
-                                <div className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{evaluation.scores.clarity}</div>
-                                <div className="text-[9px] text-neutral-400 uppercase">Clarity</div>
-                            </div>
-                            <div className="text-center p-2 bg-neutral-100 dark:bg-neutral-800 rounded">
-                                <div className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{evaluation.scores.overall}</div>
-                                <div className="text-[9px] text-neutral-400 uppercase">Overall</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
+                {evaluation && evaluation.suggestions.length > 0 && (
+                    <div className="mt-4 border-t border-[var(--border-color)] pt-4">
+                        <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-3">AI Feedback</h3>
+                        <div className="space-y-2">
                             {evaluation.suggestions.map((suggestion, idx) => (
-                                <div key={idx} className="flex gap-2 text-xs text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-900/50 p-2 rounded border border-neutral-100 dark:border-neutral-800">
-                                    <MessageSquare className="w-3 h-3 mt-0.5 text-primary shrink-0" />
-                                    <span>{suggestion}</span>
+                                <div key={idx} className="text-xs text-[var(--foreground)] opacity-80 py-1">
+                                    {idx + 1}. {suggestion}
                                 </div>
                             ))}
                         </div>
@@ -215,8 +232,7 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                 )}
             </div>
 
-            {/* Bottom AI Section */}
-            <div className="p-6 border-t border-neutral-200 dark:border-neutral-800">
+            <div className="p-4 border-t border-[var(--border-color)]">
                 {error && (
                     <div className="mb-3 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-2">
                         <AlertTriangle className="w-3 h-3" />
@@ -227,23 +243,15 @@ export function Sidebar({ analysis, onHoverIssue }: SidebarProps) {
                 <button
                     onClick={handleAnalyze}
                     disabled={isEvaluating}
-                    className="group w-full py-3 bg-transparent border border-[var(--border-color)] text-[var(--foreground)] hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:text-white rounded text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    className={buttonClass}
                 >
                     {isEvaluating ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
-                        <Zap className="w-3 h-3 text-[var(--color-primary)] group-hover:text-white transition-colors" />
+                        <Zap className="w-3 h-3" />
                     )}
                     {isEvaluating ? 'ANALYZING...' : 'ANALYZE WITH AI'}
                 </button>
-
-                {analysis && (
-                    <div className="mt-2 text-center">
-                        <span className="text-[10px] text-neutral-400">
-                            Est. Cost: ~{Math.ceil(analysis.charCount / 4)} tokens
-                        </span>
-                    </div>
-                )}
             </div>
         </aside>
     );

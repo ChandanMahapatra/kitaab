@@ -16,9 +16,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TRANSFORMERS } from "@lexical/markdown";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"; // Import for hook usage
 import { $convertToMarkdownString } from "@lexical/markdown";
-import MarkdownIt from "markdown-it";
 import EditorTheme from "@/components/editor/EditorTheme";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -27,7 +25,9 @@ import { ContentInitializationPlugin } from "@/components/editor/plugins/Content
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
 import { AnalysisPlugin } from "@/components/editor/plugins/AnalysisPlugin";
 import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlighterPlugin";
+import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { AnalysisResult } from "@/lib/analysis";
+import { loadSettings } from "@/lib/storage";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
 
 const editorConfig = {
@@ -52,11 +52,19 @@ const editorConfig = {
     ],
 };
 
-const mdParser = new MarkdownIt();
-
 export default function KitaabApp() {
     const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
     const [docTitle, setDocTitle] = useState("Untitled draft");
+    const [persistedTokens, setPersistedTokens] = useState(0);
+    const [hoveredIssueType, setHoveredIssueType] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadPersistedTokens = async () => {
+            const settings = await loadSettings();
+            setPersistedTokens(settings?.tokensUsed ?? 0);
+        };
+        loadPersistedTokens();
+    }, []);
 
     return (
         <LexicalComposer initialConfig={editorConfig}>
@@ -73,11 +81,11 @@ export default function KitaabApp() {
                             <RichTextPlugin
                                 contentEditable={
                                     <ContentEditable
-                                        className="writing-area min-h-full outline-none px-10 md:px-24 py-12 text-lg text-neutral-500 focus:text-[var(--foreground)] transition-colors max-w-3xl mx-auto"
+                                        className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-neutral-500 focus:text-[var(--foreground)] transition-colors max-w-3xl mx-auto"
                                     />
                                 }
                                 placeholder={
-                                    <div className="absolute top-12 left-0 right-0 px-10 md:px-24 pointer-events-none select-none max-w-3xl mx-auto">
+                                    <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
                                         <span className="text-neutral-400 text-lg opacity-50">Start typing here...</span>
                                     </div>
                                 }
@@ -92,22 +100,27 @@ export default function KitaabApp() {
                             <DebouncedAutoSavePlugin />
                             <ContentInitializationPlugin />
                             <IssueHighlighterPlugin />
+                            <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
                         </div>
                     </main>
 
-                    <Sidebar analysis={analysis} />
+                    <Sidebar
+                        analysis={analysis}
+                        onHoverIssue={setHoveredIssueType}
+                        onHoverHighlightChange={(type) => setHoveredIssueType(type)}
+                        onTokensUpdate={setPersistedTokens}
+                    />
 
                 </div>
 
-                {/* Footer */}
                 <footer className="h-10 border-t border-[var(--border-color)] flex items-center justify-between px-6 bg-[var(--background)] w-full z-10 transition-colors duration-300">
-                    <div className="flex items-center gap-6 text-[10px] uppercase tracking-wider font-semibold text-neutral-400">
+                    <div className="flex items-center gap-6 text-[10px] uppercase tracking-wider font-semibold opacity-50">
                         <span>Characters: <span className="text-[var(--foreground)] opacity-70">{analysis?.charCount || 0}</span></span>
                         <span>Words: <span className="text-[var(--foreground)] opacity-70">{analysis?.wordCount || 0}</span></span>
                         <span>Reading Time: <span className="text-[var(--foreground)] opacity-70">{Math.ceil(analysis?.readingTime || 0)} min</span></span>
-                        {(analysis?.charCount ?? 0) > 0 && (
-                            <span>Tokens: <span className="text-[var(--foreground)] opacity-70">~{Math.ceil((analysis?.charCount ?? 0) / 4)}</span></span>
+                        {persistedTokens > 0 && (
+                            <span>Tokens: <span className="text-[var(--foreground)] opacity-70">{persistedTokens.toLocaleString()}</span></span>
                         )}
                     </div>
                     <div className="flex items-center gap-4">
@@ -141,18 +154,24 @@ function StatusIndicator() {
         };
 
         checkStatus();
+
+        const handleSettingsChanged = () => {
+            checkStatus();
+        };
+
         window.addEventListener('storage', checkStatus);
-        window.addEventListener('kitaab-settings-changed', checkStatus); // Custom event
+        window.addEventListener('kitaab-settings-changed', handleSettingsChanged);
+
         return () => {
             window.removeEventListener('storage', checkStatus);
-            window.removeEventListener('kitaab-settings-changed', checkStatus);
+            window.removeEventListener('kitaab-settings-changed', handleSettingsChanged);
         };
     }, []);
 
     return (
         <div className="flex items-center gap-2">
             <span className={`flex h-1.5 w-1.5 rounded-full ${status === 'online' ? 'bg-muted-emerald' : 'bg-neutral-400'}`}></span>
-            <span className={`text-[10px] uppercase tracking-wider font-semibold ${status === 'online' ? 'text-muted-emerald' : 'text-neutral-400'}`}>
+            <span className={`text-[10px] uppercase tracking-wider font-semibold ${status === 'online' ? 'text-muted-emerald' : 'opacity-50'}`}>
                 {status}
             </span>
         </div>

@@ -3,7 +3,7 @@ import type { EditorThemeClasses } from "lexical";
 const EditorTheme: EditorThemeClasses = {
     ltr: "ltr",
     rtl: "rtl",
-    paragraph: "editor-paragraph mb-4 leading-relaxed",
+    paragraph: "editor-paragraph mb-4 leading-snug",
     quote: "editor-quote border-l-4 border-gray-300 pl-4 italic",
     heading: {
         h1: "editor-heading-h1 font-display text-4xl font-bold mb-6 mt-8 text-neutral-800 dark:text-neutral-100",
