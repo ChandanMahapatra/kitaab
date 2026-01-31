@@ -1,5 +1,5 @@
 export interface Issue {
-    type: 'adverb' | 'passive' | 'complex' | 'hardWord' | 'scheduler' | 'qualifier';
+    type: 'adverb' | 'passive' | 'complex' | 'veryComplex' | 'hardWord' | 'scheduler' | 'qualifier';
     index: number;
     length: number;
     text: string;
@@ -16,6 +16,12 @@ export interface AnalysisResult {
     score: number; // 0-100
     gradeLevel: number;
     issues: Issue[];
+}
+
+export const COMPLEX_WORD_SYLLABLES = 4;
+
+export function isComplexWord(word: string): boolean {
+    return syllableCount(word) >= COMPLEX_WORD_SYLLABLES;
 }
 
 export function syllableCount(word: string): number {
@@ -116,7 +122,7 @@ export function analyzeText(text: string): AnalysisResult {
         });
     }
 
-    // 3. Complex Sentences (>25 words) and very hard sentences
+    // 3. Complex Sentences (>25 words) and very hard sentences (>35 words)
     let currentPos = 0;
     // We need to map sentences back to their position in original text. 
     // This is tricky with simple split. We'll use a regex loop for sentences.
@@ -125,7 +131,15 @@ export function analyzeText(text: string): AnalysisResult {
         const sentenceText = match[0];
         const sWords = sentenceText.match(/\b\w+\b/g) || [];
 
-        if (sWords.length > 25) {
+        if (sWords.length > 35) {
+            issues.push({
+                type: 'veryComplex',
+                index: match.index,
+                length: sentenceText.length,
+                text: sentenceText.trim(),
+                suggestion: 'Split into smaller sentences'
+            });
+        } else if (sWords.length > 25) {
             issues.push({
                 type: 'complex',
                 index: match.index,
@@ -142,8 +156,7 @@ export function analyzeText(text: string): AnalysisResult {
     const wordRegex = /\b\w+\b/g;
     while ((wordMatch = wordRegex.exec(text)) !== null) {
         const word = wordMatch[0];
-        const syllables = syllableCount(word);
-        if (syllables >= 4) {
+        if (isComplexWord(word)) {
             issues.push({
                 type: 'hardWord', // Mapped to purple in UI
                 index: wordMatch.index,
@@ -180,8 +193,9 @@ export function analyzeText(text: string): AnalysisResult {
     const adverbCount = issues.filter(i => i.type === 'adverb').length;
     const passiveCount = issues.filter(i => i.type === 'passive').length;
     const complexCount = issues.filter(i => i.type === 'complex').length;
+    const veryComplexCount = issues.filter(i => i.type === 'veryComplex').length;
     const hardWordsCount = words.filter(w => syllableCount(w) >= 3).length; // 3+ syllables
-    const veryHardWordsCount = words.filter(w => syllableCount(w) >= 4).length; // 4+ syllables
+    const veryHardWordsCount = words.filter(w => syllableCount(w) >= COMPLEX_WORD_SYLLABLES).length; // 4+ syllables
 
     const penalty_adverbs = Math.max(0, adverbCount - 2) * 2;
     const penalty_passive = Math.max(0, passiveCount - 4) * 2;
@@ -200,7 +214,7 @@ export function analyzeText(text: string): AnalysisResult {
     // Let's follow logic.md blindly as requested.
     const penalty_hard_calc = (hardWordsCount / Math.max(wordCount, 1)) * 15;
     const penalty_very_hard_calc = (veryHardWordsCount / Math.max(wordCount, 1)) * 25;
-    const penalty_complex = complexCount * 1;
+    const penalty_complex = (complexCount * 1) + (veryComplexCount * 1);
 
     const totalPenalty = penalty_adverbs + penalty_passive + penalty_hard_calc + penalty_very_hard_calc + penalty_complex;
     const score = Math.max(0, Math.round(100 - totalPenalty));

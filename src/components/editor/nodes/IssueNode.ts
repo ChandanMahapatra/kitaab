@@ -31,15 +31,20 @@ export class IssueNode extends TextNode {
 
     createDOM(config: EditorConfig): HTMLElement {
         const dom = super.createDOM(config);
-        const issueClass = `issue-highlight-${this.__issueType === 'adverb' || this.__issueType === 'passive' ? 'blue' :
-            this.__issueType === 'complex' ? 'red' :
-                this.__issueType === 'hardWord' ? 'purple' : 'amber'}`;
+        dom.classList.add(`issue-type-${this.__issueType}`);
+        const issueClass = `issue-highlight-${this.__issueType === 'adverb' ? 'blue' :
+            this.__issueType === 'passive' ? 'emerald' :
+                this.__issueType === 'veryComplex' ? 'red' :
+                    this.__issueType === 'complex' ? 'amber' :
+                        this.__issueType === 'hardWord' ? 'purple' :
+                            this.__issueType === 'qualifier' ? 'primary' : 'amber'}`;
         dom.classList.add(issueClass);
         return dom;
     }
 
     updateDOM(prevNode: IssueNode, dom: HTMLElement, config: EditorConfig): boolean {
         const isUpdated = super.updateDOM(prevNode as any, dom, config);
+        dom.classList.add(`issue-type-${this.__issueType}`);
         if (prevNode.__issueType !== this.__issueType) {
             // Simple class replacement strategy would be needed if type updates, 
             // but typically nodes are replaced.

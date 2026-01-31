@@ -3,15 +3,15 @@ import type { EditorThemeClasses } from "lexical";
 const EditorTheme: EditorThemeClasses = {
     ltr: "ltr",
     rtl: "rtl",
-    paragraph: "editor-paragraph mb-4 leading-snug",
-    quote: "editor-quote border-l-4 border-gray-300 pl-4 italic",
+    paragraph: "editor-paragraph mb-4 leading-snug text-pretty",
+    quote: "editor-quote border-l-4 border-[var(--border-color)] pl-4 italic text-pretty",
     heading: {
-        h1: "editor-heading-h1 font-display text-4xl font-bold mb-6 mt-8 text-neutral-800 dark:text-neutral-100",
-        h2: "editor-heading-h2 font-display text-2xl font-semibold mb-4 mt-6 text-neutral-800 dark:text-neutral-100",
-        h3: "editor-heading-h3 font-display text-xl font-semibold mb-3 mt-5 text-neutral-800 dark:text-neutral-100",
-        h4: "editor-heading-h4 font-display text-lg font-semibold mb-2 mt-4",
-        h5: "editor-heading-h5 font-display text-base font-semibold mb-2 mt-3",
-        h6: "editor-heading-h6 font-display text-sm font-semibold mb-1 mt-2",
+        h1: "editor-heading-h1 font-display text-4xl font-bold mb-6 mt-8 text-balance",
+        h2: "editor-heading-h2 font-display text-2xl font-semibold mb-4 mt-6 text-balance",
+        h3: "editor-heading-h3 font-display text-xl font-semibold mb-3 mt-5 text-balance",
+        h4: "editor-heading-h4 font-display text-lg font-semibold mb-2 mt-4 text-balance",
+        h5: "editor-heading-h5 font-display text-base font-semibold mb-2 mt-3 text-balance",
+        h6: "editor-heading-h6 font-display text-sm font-semibold mb-1 mt-2 text-balance",
     },
     list: {
         nested: {
@@ -22,6 +22,7 @@ const EditorTheme: EditorThemeClasses = {
         listitem: "editor-list-item",
     },
     image: "editor-image",
+    horizontalRule: "editor-hr border-t border-[var(--border-color)] my-6",
     link: "editor-link text-primary hover:underline cursor-pointer",
     text: {
         bold: "editor-text-bold font-bold",
@@ -31,9 +32,9 @@ const EditorTheme: EditorThemeClasses = {
         underline: "editor-text-underline underline",
         strikethrough: "editor-text-strikethrough line-through",
         underlineStrikethrough: "editor-text-underlineStrikethrough underline line-through",
-        code: "editor-text-code font-mono bg-neutral-100 dark:bg-neutral-800 rounded px-1 py-0.5 text-sm",
+        code: "editor-text-code font-mono bg-[var(--sidebar-bg)] rounded px-1 py-0.5 text-sm",
     },
-    code: "editor-code font-mono bg-neutral-100 dark:bg-neutral-800 rounded p-4 block my-4 overflow-x-auto text-sm",
+    code: "editor-code font-mono bg-[var(--sidebar-bg)] rounded p-4 block my-4 overflow-x-auto text-sm",
     codeHighlight: {
         atrule: "editor-tokenAttr text-blue-600",
         attr: "editor-tokenAttr text-blue-600",

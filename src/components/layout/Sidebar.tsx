@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
 import { evaluateText, EvaluationResult, providers } from "@/lib/ai";
 import { loadSettings, saveSettings } from "@/lib/storage";
 import { Zap, Loader2, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
     analysis: AnalysisResult | null;
@@ -19,6 +20,7 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hoverHighlightEnabled, setHoverHighlightEnabled] = useState(false);
+    const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
 
     const score = analysis?.score ?? 100;
     const gradeLevel = analysis?.gradeLevel ?? 0;
@@ -32,24 +34,64 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
         loadSettingsData();
     }, []);
 
+    useEffect(() => {
+        const root = document.documentElement;
+        if (hoverHighlightEnabled) {
+            root.setAttribute('data-highlight-type', '__all__');
+        } else {
+            root.removeAttribute('data-highlight-type');
+        }
+        onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : null);
+    }, [hoverHighlightEnabled, onHoverHighlightChange]);
+
     const issuesByType = analysis?.issues.reduce((acc, issue) => {
         if (!acc[issue.type]) acc[issue.type] = [];
         acc[issue.type].push(issue);
         return acc;
     }, {} as Record<string, Issue[]>) ?? {};
 
+    const issueTypeKeys = useMemo(() => Object.keys(issuesByType) as Issue['type'][], [issuesByType]);
+
+    useEffect(() => {
+        if (!hoverHighlightEnabled) {
+            setActiveIssueTypes(new Set());
+            return;
+        }
+        setActiveIssueTypes(new Set(issueTypeKeys));
+    }, [hoverHighlightEnabled, issueTypeKeys]);
+
+    useEffect(() => {
+        const root = document.documentElement;
+        const issueTypes: Issue['type'][] = [
+            'adverb',
+            'passive',
+            'complex',
+            'veryComplex',
+            'hardWord',
+            'qualifier',
+        ];
+        issueTypes.forEach((type) => root.removeAttribute(`data-highlight-active-${type}`));
+        if (hoverHighlightEnabled) {
+            activeIssueTypes.forEach((type) => root.setAttribute(`data-highlight-active-${type}`, 'on'));
+            root.removeAttribute('data-highlight-type');
+        }
+    }, [hoverHighlightEnabled, activeIssueTypes]);
+
     const getIssueColor = (type: string) => {
         switch (type) {
-            case 'complex': return 'muted-red';
+            case 'veryComplex': return 'muted-red';
+            case 'complex': return 'muted-amber';
             case 'hardWord': return 'muted-purple';
             case 'adverb': return 'muted-blue';
-            case 'passive': return 'muted-blue';
+            case 'passive': return 'muted-emerald';
+            case 'qualifier': return 'primary';
             default: return 'muted-amber';
         }
     };
 
     const getIssueLabel = (type: string) => {
         switch (type) {
+            case 'veryComplex': return 'Very Hard Sentences';
             case 'complex': return 'Hard Sentences';
             case 'hardWord': return 'Complex Words';
             case 'adverb': return 'Adverbs';
@@ -61,12 +103,31 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
 
     const handleHoverEnter = (type: string) => {
         onHoverIssue?.(type);
-        onHoverHighlightChange?.(hoverHighlightEnabled ? type : null);
+        onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : type);
+        if (!hoverHighlightEnabled) {
+            document.documentElement.setAttribute('data-highlight-type', type);
+        }
     };
 
     const handleHoverLeave = () => {
         onHoverIssue?.(null);
-        onHoverHighlightChange?.(null);
+        onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : null);
+        if (!hoverHighlightEnabled) {
+            document.documentElement.removeAttribute('data-highlight-type');
+        }
+    };
+
+    const toggleIssueType = (type: Issue['type']) => {
+        if (!hoverHighlightEnabled) return;
+        setActiveIssueTypes((prev) => {
+            const next = new Set(prev);
+            if (next.has(type)) {
+                next.delete(type);
+            } else {
+                next.add(type);
+            }
+            return next;
+        });
     };
 
     const toggleHoverHighlight = async () => {
@@ -77,6 +138,12 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             ...settings,
             hoverHighlightEnabled: newValue,
         });
+        onHoverHighlightChange?.(newValue ? '__all__' : null);
+        if (newValue) {
+            document.documentElement.setAttribute('data-highlight-type', '__all__');
+        } else {
+            document.documentElement.removeAttribute('data-highlight-type');
+        }
     };
 
     const handleAnalyze = async () => {
@@ -153,29 +220,31 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
                     </button>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-3 bg-[var(--background)] rounded-lg border border-[var(--border-color)] mb-4 shadow-sm">
-                    <div className="relative w-32 h-16 overflow-hidden">
-                        <svg viewBox="0 0 100 50" className="w-full h-full">
-                            <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" fill="none" className="transition-colors" style={{ stroke: 'var(--border-color)' }} />
-                            <path
-                                d="M 10 50 A 40 40 0 0 1 90 50"
-                                strokeWidth="10"
-                                stroke="currentColor"
-                                fill="none"
-                                className="text-primary transition-all duration-1000 ease-out"
-                                strokeDasharray="125.6"
-                                strokeDashoffset={125.6 - (125.6 * (score / 100))}
-                            />
-                        </svg>
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                            <span className="text-2xl font-bold leading-none text-[var(--foreground)]">{score}</span>
-                            <span className="text-[10px] opacity-50 font-semibold uppercase">Score</span>
+                {hoverHighlightEnabled && (
+                    <div className="flex flex-col items-center justify-center py-3 bg-[var(--background)] rounded-lg border border-[var(--border-color)] mb-4 shadow-sm">
+                        <div className="relative w-32 h-16 overflow-hidden">
+                            <svg viewBox="0 0 100 50" className="w-full h-full">
+                                <path d="M 10 50 A 40 40 0 0 1 90 50" strokeWidth="10" fill="none" className="transition-colors" style={{ stroke: 'var(--border-color)' }} />
+                                <path
+                                    d="M 10 50 A 40 40 0 0 1 90 50"
+                                    strokeWidth="10"
+                                    stroke="currentColor"
+                                    fill="none"
+                                    className="text-primary transition-all duration-1000 ease-out"
+                                    strokeDasharray="125.6"
+                                    strokeDashoffset={125.6 - (125.6 * (score / 100))}
+                                />
+                            </svg>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                <span className="text-2xl font-bold leading-none text-[var(--foreground)]">{score}</span>
+                                <span className="text-[10px] opacity-50 font-semibold uppercase">Score</span>
+                            </div>
                         </div>
+                        <p className="text-xs font-medium opacity-50 mt-2">
+                            {score > 80 ? 'Good Readability' : score > 50 ? 'Needs Improvement' : 'Hard to Read'}
+                        </p>
                     </div>
-                    <p className="text-xs font-medium opacity-50 mt-2">
-                        {score > 80 ? 'Good Readability' : score > 50 ? 'Needs Improvement' : 'Hard to Read'}
-                    </p>
-                </div>
+                )}
 
                 <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
@@ -199,13 +268,19 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
 
                 {Object.entries(issuesByType).map(([type, issues]) => {
                     const colorClass = `text-${getIssueColor(type)}`;
+                    const isActive = activeIssueTypes.has(type as Issue['type']);
 
                     return (
                         <div
                             key={type}
-                            className="p-3 border border-[var(--border-color)] rounded-lg hover:border-[var(--color-primary)] hover:bg-[var(--background)] transition-colors cursor-pointer"
-                            onMouseEnter={() => handleHoverEnter(type)}
-                            onMouseLeave={handleHoverLeave}
+                            className={cn(
+                                "p-3 border border-[var(--border-color)] rounded-lg transition-colors cursor-pointer",
+                                "hover:border-[var(--color-primary)] hover:bg-[var(--background)]",
+                                hoverHighlightEnabled && !isActive && "opacity-50"
+                            )}
+                            onPointerEnter={() => handleHoverEnter(type)}
+                            onPointerLeave={handleHoverLeave}
+                            onClick={() => toggleIssueType(type as Issue['type'])}
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <span className={`text-xs font-bold capitalize ${hoverHighlightEnabled ? colorClass : 'opacity-60'}`}>{getIssueLabel(type)}</span>

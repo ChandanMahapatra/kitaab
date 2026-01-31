@@ -47,9 +47,17 @@ export function IssueVisibilityPlugin({ hoveredIssueType, enabled }: IssueVisibi
                             return;
                         }
 
-                        const typeClass = `issue-highlight-${hoveredIssueType === 'adverb' || hoveredIssueType === 'passive' ? 'blue' :
-                            hoveredIssueType === 'complex' ? 'red' :
-                                hoveredIssueType === 'hardWord' ? 'purple' : 'amber'}`;
+                        if (hoveredIssueType === '__all__') {
+                            element.classList.add('issue-visible');
+                            return;
+                        }
+
+                        const typeClass = `issue-highlight-${hoveredIssueType === 'adverb' ? 'blue' :
+                            hoveredIssueType === 'passive' ? 'emerald' :
+                                hoveredIssueType === 'veryComplex' ? 'red' :
+                                    hoveredIssueType === 'complex' ? 'amber' :
+                                        hoveredIssueType === 'hardWord' ? 'purple' :
+                                            hoveredIssueType === 'qualifier' ? 'primary' : 'amber'}`;
 
                         if (element.classList.contains(typeClass)) {
                             element.classList.add('issue-visible');

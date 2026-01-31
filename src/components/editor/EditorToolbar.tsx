@@ -1,7 +1,9 @@
 "use client";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { FORMAT_TEXT_COMMAND, TextFormatType } from "lexical";
+import { FORMAT_TEXT_COMMAND, TextFormatType, $getSelection, $isRangeSelection } from "lexical";
+import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list";
+import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { Bold, Italic, Code, Link, List, ListOrdered } from "lucide-react";
 
 export function EditorToolbar() {
@@ -9,6 +11,27 @@ export function EditorToolbar() {
 
     const formatText = (format: TextFormatType) => {
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+    };
+
+    const insertLink = () => {
+        const url = prompt("Enter URL:", "https://");
+        if (url) {
+            editor.update(() => {
+                const selection = $getSelection();
+                if ($isRangeSelection(selection) && selection.isCollapsed()) {
+                    selection.insertText(url);
+                }
+            });
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
+        }
+    };
+
+    const insertUnorderedList = () => {
+        editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+    };
+
+    const insertOrderedList = () => {
+        editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
     };
 
     const toolbarButtonClass = "p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200";
@@ -40,9 +63,9 @@ export function EditorToolbar() {
                 <Code className="w-4 h-4" />
             </button>
             <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 mx-1" />
-            {/* Placeholder for Link and Lists - these require more complex logic/plugins */}
             <button
                 type="button"
+                onClick={insertLink}
                 className={toolbarButtonClass}
                 aria-label="Link"
             >
@@ -50,6 +73,7 @@ export function EditorToolbar() {
             </button>
             <button
                 type="button"
+                onClick={insertUnorderedList}
                 className={toolbarButtonClass}
                 aria-label="Unordered List"
             >
@@ -57,6 +81,7 @@ export function EditorToolbar() {
             </button>
             <button
                 type="button"
+                onClick={insertOrderedList}
                 className={toolbarButtonClass}
                 aria-label="Ordered List"
             >

@@ -12,6 +12,7 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
+import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
@@ -48,6 +49,7 @@ const editorConfig = {
         TableRowNode,
         LinkNode,
         AutoLinkNode,
+        HorizontalRuleNode,
         IssueNode,
     ],
 };
@@ -68,7 +70,7 @@ export default function KitaabApp() {
 
     return (
         <LexicalComposer initialConfig={editorConfig}>
-            <div className="flex h-screen overflow-hidden flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 font-sans">
+            <div className="flex h-dvh overflow-hidden flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 font-display">
 
                 <Header
                     title={docTitle}
@@ -81,12 +83,12 @@ export default function KitaabApp() {
                             <RichTextPlugin
                                 contentEditable={
                                     <ContentEditable
-                                        className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-neutral-500 focus:text-[var(--foreground)] transition-colors max-w-3xl mx-auto"
+                                        className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
                                     />
                                 }
                                 placeholder={
                                     <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
-                                        <span className="text-neutral-400 text-lg opacity-50">Start typing here...</span>
+                                        <span className="text-[var(--foreground)] text-lg opacity-40 text-pretty">Start typing here...</span>
                                     </div>
                                 }
                                 ErrorBoundary={LexicalErrorBoundary}
@@ -137,33 +139,29 @@ function StatusIndicator() {
     const [status, setStatus] = useState<'offline' | 'online'>('offline');
 
     useEffect(() => {
-        const checkStatus = () => {
+        let isMounted = true;
+
+        const checkStatus = async () => {
             try {
-                const stored = localStorage.getItem('kitaab-settings');
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    if (parsed.apiKey) {
-                        setStatus('online');
-                        return;
-                    }
-                }
-                setStatus('offline');
+                const settings = await loadSettings();
+                if (!isMounted) return;
+                setStatus(settings?.apiKey ? 'online' : 'offline');
             } catch (e) {
+                if (!isMounted) return;
                 setStatus('offline');
             }
         };
 
-        checkStatus();
+        void checkStatus();
 
         const handleSettingsChanged = () => {
-            checkStatus();
+            void checkStatus();
         };
 
-        window.addEventListener('storage', checkStatus);
         window.addEventListener('kitaab-settings-changed', handleSettingsChanged);
 
         return () => {
-            window.removeEventListener('storage', checkStatus);
+            isMounted = false;
             window.removeEventListener('kitaab-settings-changed', handleSettingsChanged);
         };
     }, []);
