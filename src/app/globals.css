@@ -168,45 +168,65 @@ body {
 }
 
 @layer utilities {
-  [data-highlight-type="__all__"] .issue-highlight-blue,
-  [data-highlight-type="adverb"] .issue-type-adverb,
+  /* Highlight On mode: show underline only (no background) */
   [data-highlight-active-adverb="on"] .issue-type-adverb {
-    background-color: rgba(100, 181, 246, 0.3) !important;
-    border-bottom-color: #64b5f6 !important;
+    border-bottom: 2px solid #64b5f6 !important;
+    background-color: transparent !important;
   }
 
-  [data-highlight-type="__all__"] .issue-highlight-amber,
-  [data-highlight-type="complex"] .issue-type-complex,
-  [data-highlight-type="qualifier"] .issue-type-qualifier,
-  [data-highlight-active-complex="on"] .issue-type-complex,
-  [data-highlight-active-qualifier="on"] .issue-type-qualifier {
-    background-color: rgba(255, 183, 77, 0.3) !important;
-    border-bottom-color: #ffb74d !important;
-  }
-
-  [data-highlight-type="passive"] .issue-type-passive,
   [data-highlight-active-passive="on"] .issue-type-passive {
-    background-color: rgba(129, 199, 132, 0.3) !important;
-    border-bottom-color: #81c784 !important;
+    border-bottom: 2px solid #81c784 !important;
+    background-color: transparent !important;
   }
 
-  [data-highlight-type="__all__"] .issue-highlight-purple,
-  [data-highlight-type="hardWord"] .issue-type-hardWord,
-  [data-highlight-active-hardWord="on"] .issue-type-hardWord {
-    background-color: rgba(186, 104, 200, 0.3) !important;
-    border-bottom-color: #ba68c8 !important;
+  [data-highlight-active-complex="on"] .issue-type-complex {
+    border-bottom: 2px solid #ffb74d !important;
+    background-color: transparent !important;
   }
 
-  [data-highlight-type="__all__"] .issue-highlight-red,
-  [data-highlight-type="veryComplex"] .issue-type-veryComplex,
   [data-highlight-active-veryComplex="on"] .issue-type-veryComplex {
-    background-color: rgba(229, 115, 115, 0.3) !important;
-    border-bottom-color: #e57373 !important;
+    border-bottom: 2px solid #e57373 !important;
+    background-color: transparent !important;
   }
 
-  [data-highlight-type="qualifier"] .issue-type-qualifier,
+  [data-highlight-active-hardWord="on"] .issue-type-hardWord {
+    border-bottom: 2px solid #ba68c8 !important;
+    background-color: transparent !important;
+  }
+
   [data-highlight-active-qualifier="on"] .issue-type-qualifier {
+    border-bottom: 2px solid #546e7a !important;
+    background-color: transparent !important;
+  }
+
+  /* Hover over issue card: add background to matching issues */
+  [data-highlight-hover="adverb"] .issue-type-adverb {
+    background-color: rgba(100, 181, 246, 0.3) !important;
+    border-bottom: 2px solid #64b5f6 !important;
+  }
+
+  [data-highlight-hover="passive"] .issue-type-passive {
+    background-color: rgba(129, 199, 132, 0.3) !important;
+    border-bottom: 2px solid #81c784 !important;
+  }
+
+  [data-highlight-hover="complex"] .issue-type-complex {
+    background-color: rgba(255, 183, 77, 0.3) !important;
+    border-bottom: 2px solid #ffb74d !important;
+  }
+
+  [data-highlight-hover="veryComplex"] .issue-type-veryComplex {
+    background-color: rgba(229, 115, 115, 0.3) !important;
+    border-bottom: 2px solid #e57373 !important;
+  }
+
+  [data-highlight-hover="hardWord"] .issue-type-hardWord {
+    background-color: rgba(186, 104, 200, 0.3) !important;
+    border-bottom: 2px solid #ba68c8 !important;
+  }
+
+  [data-highlight-hover="qualifier"] .issue-type-qualifier {
     background-color: rgba(84, 110, 122, 0.3) !important;
-    border-bottom-color: #546e7a !important;
+    border-bottom: 2px solid #546e7a !important;
   }
 }

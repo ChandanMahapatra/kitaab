@@ -21,17 +21,29 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const [error, setError] = useState<string | null>(null);
     const [hoverHighlightEnabled, setHoverHighlightEnabled] = useState(false);
     const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
+    const [aiConfigured, setAiConfigured] = useState(false);
 
     const score = analysis?.score ?? 100;
     const gradeLevel = analysis?.gradeLevel ?? 0;
     const fleschScore = analysis?.fleschScore ?? 0;
 
+    // Re-check AI config periodically (e.g., when settings modal closes)
+    const checkAiConfig = async () => {
+        const settings = await loadSettings();
+        setAiConfigured(!!(settings?.provider && settings?.apiKey));
+    };
+
     useEffect(() => {
         const loadSettingsData = async () => {
             const settings = await loadSettings();
             setHoverHighlightEnabled(settings?.hoverHighlightEnabled ?? false);
+            setAiConfigured(!!(settings?.provider && settings?.apiKey));
         };
         loadSettingsData();
+        // Listen for settings changes via custom event dispatched by SettingsModal
+        const handleSettingsChange = () => checkAiConfig();
+        window.addEventListener('kitaab-settings-changed', handleSettingsChange);
+        return () => window.removeEventListener('kitaab-settings-changed', handleSettingsChange);
     }, []);
 
     useEffect(() => {
@@ -106,17 +118,13 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const handleHoverEnter = (type: string) => {
         onHoverIssue?.(type);
         onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : type);
-        if (!hoverHighlightEnabled) {
-            document.documentElement.setAttribute('data-highlight-type', type);
-        }
+        document.documentElement.setAttribute('data-highlight-hover', type);
     };
 
     const handleHoverLeave = () => {
         onHoverIssue?.(null);
         onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : null);
-        if (!hoverHighlightEnabled) {
-            document.documentElement.removeAttribute('data-highlight-type');
-        }
+        document.documentElement.removeAttribute('data-highlight-hover');
     };
 
     const toggleIssueType = (type: Issue['type']) => {
@@ -250,11 +258,25 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
 
                 <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                        <span className="opacity-50">Grade Level</span>
+                        <a 
+                            href="https://en.wikipedia.org/wiki/Coleman%E2%80%93Liau_index" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="opacity-50 hover:opacity-100 underline decoration-dotted underline-offset-2 transition-opacity"
+                        >
+                            Grade Level
+                        </a>
                         <span className="font-bold text-primary">Grade {gradeLevel}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
-                        <span className="opacity-50">Flesch Score</span>
+                        <a 
+                            href="https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="opacity-50 hover:opacity-100 underline decoration-dotted underline-offset-2 transition-opacity"
+                        >
+                            Flesch Score
+                        </a>
                         <span className="font-bold text-[var(--foreground)] opacity-80">{fleschScore}</span>
                     </div>
                 </div>
@@ -319,8 +341,9 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
 
                 <button
                     onClick={handleAnalyze}
-                    disabled={isEvaluating}
-                    className={buttonClass}
+                    disabled={isEvaluating || !aiConfigured}
+                    className={cn(buttonClass, !aiConfigured && "opacity-50 cursor-not-allowed hover:bg-transparent hover:border-[var(--border-color)] hover:text-[var(--foreground)]")}
+                    title={!aiConfigured ? "Configure AI provider in Settings first" : undefined}
                 >
                     {isEvaluating ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
