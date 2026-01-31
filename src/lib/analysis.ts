@@ -79,7 +79,6 @@ export function analyzeText(text: string): AnalysisResult {
     // 4.71 * (chars/words) + 0.5 * (words/sentences) - 21.43
     // Note: logic.md specifies letters, not straight chars.
     const letters = (text.match(/[a-zA-Z]/g) || []).length;
-    const avgLettersPerWord = wordCount > 0 ? letters / wordCount : 0;
 
     // NOTE: Logic.md uses (letters / wordCount) for Grade Level formula
     // Formula: 0.39 * (total words / total sentences) + 11.8 * (total syllables / total words) - 15.59 (Flesch-Kincaid Grade Level)
@@ -123,7 +122,6 @@ export function analyzeText(text: string): AnalysisResult {
     }
 
     // 3. Complex Sentences (>25 words) and very hard sentences (>35 words)
-    let currentPos = 0;
     // We need to map sentences back to their position in original text. 
     // This is tricky with simple split. We'll use a regex loop for sentences.
     const sentenceRegex = /[^.!?]+[.!?]+(\s+|$)/g;
@@ -206,10 +204,8 @@ export function analyzeText(text: string): AnalysisResult {
     // Re-reading logic.md: "const penalty_hard = (hardWords / Math.max(wordCount, 1)) * 15;"
     // This likely means if 100% of words are hard, penalty is 15.
     // Let's stick to the logic.md formula exactly.
-    const penalty_hard = (hardWordsCount / Math.max(wordCount, 1)) * 100; // Adjusted: usually these are % based. 15% hard words is normal? 
     // Actually, standard tools often define "hard sentence" density.
     // Let's stick strictly to `logic.md`:
-    // const penalty_hard = (hardWords / Math.max(wordCount, 1)) * 15;
     // This results in max penalty of 15 if ALL words are hard.
     // Let's follow logic.md blindly as requested.
     const penalty_hard_calc = (hardWordsCount / Math.max(wordCount, 1)) * 15;

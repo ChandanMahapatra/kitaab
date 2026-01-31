@@ -43,7 +43,7 @@ export class IssueNode extends TextNode {
     }
 
     updateDOM(prevNode: IssueNode, dom: HTMLElement, config: EditorConfig): boolean {
-        const isUpdated = super.updateDOM(prevNode as any, dom, config);
+        const isUpdated = super.updateDOM(prevNode as unknown as TextNode, dom, config);
         dom.classList.add(`issue-type-${this.__issueType}`);
         if (prevNode.__issueType !== this.__issueType) {
             // Simple class replacement strategy would be needed if type updates, 
@@ -79,6 +79,6 @@ export function $createIssueNode(text: string, issueType: string): IssueNode {
     return new IssueNode(text, issueType);
 }
 
-export function $isIssueNode(node: any): node is IssueNode {
+export function $isIssueNode(node: unknown): node is IssueNode {
     return node instanceof IssueNode;
 }

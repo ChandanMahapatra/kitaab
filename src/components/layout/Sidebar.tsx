@@ -44,11 +44,13 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
         onHoverHighlightChange?.(hoverHighlightEnabled ? '__all__' : null);
     }, [hoverHighlightEnabled, onHoverHighlightChange]);
 
-    const issuesByType = analysis?.issues.reduce((acc, issue) => {
-        if (!acc[issue.type]) acc[issue.type] = [];
-        acc[issue.type].push(issue);
-        return acc;
-    }, {} as Record<string, Issue[]>) ?? {};
+    const issuesByType = useMemo(() => {
+        return analysis?.issues.reduce((acc, issue) => {
+            if (!acc[issue.type]) acc[issue.type] = [];
+            acc[issue.type].push(issue);
+            return acc;
+        }, {} as Record<string, Issue[]>) ?? {};
+    }, [analysis?.issues]);
 
     const issueTypeKeys = useMemo(() => Object.keys(issuesByType) as Issue['type'][], [issuesByType]);
 

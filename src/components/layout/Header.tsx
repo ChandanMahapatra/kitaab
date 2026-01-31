@@ -39,8 +39,10 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('kitaab-theme') as Theme || 'light';
-        setTheme(savedTheme);
         applyTheme(savedTheme);
+        // Use startTransition or schedule the state update after render
+        const timeoutId = setTimeout(() => setTheme(savedTheme), 0);
+        return () => clearTimeout(timeoutId);
     }, []);
 
     const handleThemeChange = (t: Theme) => {

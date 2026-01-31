@@ -11,9 +11,9 @@ const DEBOUNCE_DELAY = 1000;
 const CURRENT_DOC_ID = "default-draft"; // Single document mode for now
 
 export function AutoSavePlugin() {
-    const [editor] = useLexicalComposerContext();
+    useLexicalComposerContext();
 
-    const saveContent = useCallback(async (editorState: any) => {
+    const saveContent = useCallback(async (editorState: { read: (fn: () => void) => void }) => {
         editorState.read(() => {
             const markdown = $convertToMarkdownString(TRANSFORMERS);
             const now = new Date();
