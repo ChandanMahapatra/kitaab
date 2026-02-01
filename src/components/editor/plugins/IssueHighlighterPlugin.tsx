@@ -86,7 +86,15 @@ export function IssueHighlighterPlugin() {
 
                 if (matches.length === 0) break;
 
-                const bestMatch = matches.reduce((best, current) => {
+                // Prioritize word-level issues (adverb, passive, qualifier, hardWord) over sentence-level
+                // This ensures words inside complex sentences still get highlighted
+                const wordLevelMatches = matches.filter(m => m.type === 'adverb' || m.type === 'passive' || m.type === 'qualifier' || m.type === 'hardWord');
+                const sentenceLevelMatches = matches.filter(m => m.type === 'complex' || m.type === 'veryComplex');
+                
+                // Prefer word-level matches first, then sentence-level
+                const prioritizedMatches = wordLevelMatches.length > 0 ? wordLevelMatches : sentenceLevelMatches;
+                
+                const bestMatch = prioritizedMatches.reduce((best, current) => {
                     if (current.start < best.start) return current;
                     if (current.start === best.start) {
                         const bestLen = best.end - best.start;
@@ -102,7 +110,7 @@ export function IssueHighlighterPlugin() {
                     const word = matchText.toLowerCase();
                     const exceptions = ['family', 'only', 'july', 'reply', 'supply', 'apply', 'belly', 'jelly', 'rally', 'ally'];
                     if (exceptions.includes(word)) {
-                        const split = start === 0
+                        const split: TextNode[] = start === 0
                             ? currentNode.splitText(end)
                             : currentNode.splitText(start, end);
                         currentNode = split[split.length - 1] ?? null;

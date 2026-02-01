@@ -92,39 +92,39 @@ body {
 }
 
 .issue-highlight-yellow {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-amber {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-red {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-purple {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-blue {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
-  text-decoration: none !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
+    text-decoration: none !important;
 }
 
 .issue-highlight-emerald {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-primary {
-  background-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
+    background-color: transparent !important;
+    border-bottom-color: transparent !important;
 }
 
 .issue-muted {
@@ -163,70 +163,37 @@ body {
 }
 
 .issue-visible.issue-highlight-primary {
-  background-color: rgba(84, 110, 122, 0.3) !important;
-  border-bottom-color: #546e7a !important;
+    background-color: rgba(84, 110, 122, 0.3) !important;
+    border-bottom-color: #546e7a !important;
 }
 
-@layer utilities {
-  /* Highlight On mode: show underline only (no background) */
-  [data-highlight-active-adverb="on"] .issue-type-adverb {
-    border-bottom: 2px solid #64b5f6 !important;
-    background-color: transparent !important;
-  }
-
-  [data-highlight-active-passive="on"] .issue-type-passive {
-    border-bottom: 2px solid #81c784 !important;
-    background-color: transparent !important;
-  }
-
-  [data-highlight-active-complex="on"] .issue-type-complex {
-    border-bottom: 2px solid #ffb74d !important;
-    background-color: transparent !important;
-  }
-
-  [data-highlight-active-veryComplex="on"] .issue-type-veryComplex {
-    border-bottom: 2px solid #e57373 !important;
-    background-color: transparent !important;
-  }
-
-  [data-highlight-active-hardWord="on"] .issue-type-hardWord {
-    border-bottom: 2px solid #ba68c8 !important;
-    background-color: transparent !important;
-  }
-
-  [data-highlight-active-qualifier="on"] .issue-type-qualifier {
-    border-bottom: 2px solid #546e7a !important;
-    background-color: transparent !important;
-  }
-
-  /* Hover over issue card: add background to matching issues */
-  [data-highlight-hover="adverb"] .issue-type-adverb {
+/* Hover over issue card: add background to matching issues */
+html[data-highlight-hover="adverb"] .issue-type-adverb.issue-highlight-blue {
     background-color: rgba(100, 181, 246, 0.3) !important;
     border-bottom: 2px solid #64b5f6 !important;
-  }
+}
 
-  [data-highlight-hover="passive"] .issue-type-passive {
+html[data-highlight-hover="passive"] .issue-type-passive.issue-highlight-emerald {
     background-color: rgba(129, 199, 132, 0.3) !important;
     border-bottom: 2px solid #81c784 !important;
-  }
+}
 
-  [data-highlight-hover="complex"] .issue-type-complex {
+html[data-highlight-hover="complex"] .issue-type-complex.issue-highlight-amber {
     background-color: rgba(255, 183, 77, 0.3) !important;
     border-bottom: 2px solid #ffb74d !important;
-  }
+}
 
-  [data-highlight-hover="veryComplex"] .issue-type-veryComplex {
+html[data-highlight-hover="veryComplex"] .issue-type-veryComplex.issue-highlight-red {
     background-color: rgba(229, 115, 115, 0.3) !important;
     border-bottom: 2px solid #e57373 !important;
-  }
+}
 
-  [data-highlight-hover="hardWord"] .issue-type-hardWord {
+html[data-highlight-hover="hardWord"] .issue-type-hardWord.issue-highlight-purple {
     background-color: rgba(186, 104, 200, 0.3) !important;
     border-bottom: 2px solid #ba68c8 !important;
-  }
+}
 
-  [data-highlight-hover="qualifier"] .issue-type-qualifier {
+html[data-highlight-hover="qualifier"] .issue-type-qualifier.issue-highlight-primary {
     background-color: rgba(84, 110, 122, 0.3) !important;
     border-bottom: 2px solid #546e7a !important;
-  }
 }

@@ -129,8 +129,10 @@ export async function evaluateText(
 
     const effectiveBaseURL = baseURL || provider.baseURL;
 
-    const prompt = `Evaluate the following markdown text for grammar, clarity, and overall quality. 
-Provide scores out of 100 and up to 3 suggestions for improvement.
+    const prompt = `Evaluate the following text for grammar, clarity, and overall writing quality. 
+Focus only on the prose content - ignore markdown syntax, formatting symbols (like #, *, -, [], (), etc.), and technical markup issues.
+Provide scores out of 100 and up to 3 suggestions for improving the actual writing.
+Do not comment on markdown syntax, formatting, or technical markup - only the writing quality.
 
 Format your response exactly like this:
 Grammar: [score]

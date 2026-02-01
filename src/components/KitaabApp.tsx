@@ -26,6 +26,7 @@ import { ContentInitializationPlugin } from "@/components/editor/plugins/Content
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
 import { AnalysisPlugin } from "@/components/editor/plugins/AnalysisPlugin";
 import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlighterPlugin";
+import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings } from "@/lib/storage";
@@ -127,6 +128,7 @@ export default function KitaabApp() {
                             <DebouncedAutoSavePlugin />
                             <ContentInitializationPlugin />
                             <IssueHighlighterPlugin />
+                            <SentenceHighlighterPlugin analysis={analysis} />
                             <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
                         </div>
