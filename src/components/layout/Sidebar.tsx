@@ -286,7 +286,7 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
                 <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-2">Writing Issues</h3>
                 {Object.keys(issuesByType).length === 0 && !evaluation && (
                     <div className="text-xs opacity-40 text-center py-6">
-                        No issues detected. Good job!
+                        No issues detected.
                     </div>
                 )}
 

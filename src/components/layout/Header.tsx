@@ -146,7 +146,7 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                         <div className="flex items-center gap-1 h-6 pl-4 border-l border-[var(--border-color)]">
                             <DropdownMenu.Root>
                                 <DropdownMenu.Trigger asChild>
-                                    <button type="button" className={buttonClass} aria-label="Heading options">
+                                    <button type="button" className={buttonClass} aria-label="Heading options" title="Heading (# for H1, ## for H2, etc.)">
                                         <Heading className="w-4 h-4" />
                                     </button>
                                 </DropdownMenu.Trigger>
@@ -167,24 +167,24 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
-                            <button type="button" onClick={() => formatText("bold")} className={buttonClass} aria-label="Bold">
+                            <button type="button" onClick={() => formatText("bold")} className={buttonClass} aria-label="Bold" title="Bold (**text**)">
                                 <Bold className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic">
+                            <button type="button" onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic" title="Italic (*text*)">
                                 <Italic className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => formatText("strikethrough")} className={buttonClass} aria-label="Strikethrough">
+                            <button type="button" onClick={() => formatText("strikethrough")} className={buttonClass} aria-label="Strikethrough" title="Strikethrough (~~text~~)">
                                 <Strikethrough className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => formatText("code")} className={buttonClass} aria-label="Inline code">
+                            <button type="button" onClick={() => formatText("code")} className={buttonClass} aria-label="Inline code" title="Inline code (`code`)">
                                 <Code className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={insertLink} className={buttonClass} aria-label="Link">
+                            <button type="button" onClick={insertLink} className={buttonClass} aria-label="Link" title="Insert link">
                                 <LinkIcon className="w-4 h-4" />
                             </button>
                             <DropdownMenu.Root>
                                 <DropdownMenu.Trigger asChild>
-                                    <button type="button" className={buttonClass} aria-label="List options">
+                                    <button type="button" className={buttonClass} aria-label="List options" title="List (- or 1. for lists)">
                                         <List className="w-4 h-4" />
                                     </button>
                                 </DropdownMenu.Trigger>
@@ -208,13 +208,13 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
-                            <button type="button" onClick={insertQuote} className={buttonClass} aria-label="Blockquote">
+                            <button type="button" onClick={insertQuote} className={buttonClass} aria-label="Blockquote" title="Blockquote (> text)">
                                 <Quote className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={insertCodeBlock} className={buttonClass} aria-label="Code block">
+                            <button type="button" onClick={insertCodeBlock} className={buttonClass} aria-label="Code block" title="Code block (```)">
                                 <Code2 className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={insertHorizontalRule} className={buttonClass} aria-label="Horizontal rule">
+                            <button type="button" onClick={insertHorizontalRule} className={buttonClass} aria-label="Horizontal rule" title="Horizontal rule (---)">
                                 <Minus className="w-4 h-4" />
                             </button>
                         </div>
@@ -224,7 +224,7 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                 <div className="flex items-center gap-3">
                     <DropdownMenu.Root onOpenChange={setIsThemeMenuOpen}>
                         <DropdownMenu.Trigger asChild>
-                            <button className={cn(buttonClass, isThemeMenuOpen && "bg-neutral-200 dark:bg-neutral-800")} aria-label="Change Theme">
+                            <button className={cn(buttonClass, isThemeMenuOpen && "bg-neutral-200 dark:bg-neutral-800")} aria-label="Change Theme" title="Change theme">
                                 <Palette className="w-4 h-4" />
                             </button>
                         </DropdownMenu.Trigger>
@@ -251,13 +251,14 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                         onClick={() => setIsSettingsOpen(true)}
                         className={buttonClass}
                         aria-label="Settings"
+                        title="Settings"
                     >
                         <Settings className="w-5 h-5" />
                     </button>
 
                     <DropdownMenu.Root onOpenChange={setIsExportMenuOpen}>
                         <DropdownMenu.Trigger asChild>
-                            <button className={cn(buttonClass, isExportMenuOpen && "bg-neutral-200 dark:bg-neutral-800")} aria-label="Export">
+                            <button className={cn(buttonClass, isExportMenuOpen && "bg-neutral-200 dark:bg-neutral-800")} aria-label="Export" title="Export document">
                                 <Share className="w-4 h-4" />
                             </button>
                         </DropdownMenu.Trigger>

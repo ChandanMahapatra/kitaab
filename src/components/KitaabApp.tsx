@@ -12,12 +12,12 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
-import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
+import { HorizontalRuleNode, $createHorizontalRuleNode, $isHorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
+import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { TRANSFORMERS } from "@lexical/markdown";
-import { $convertToMarkdownString } from "@lexical/markdown";
+import { TRANSFORMERS, ElementTransformer } from "@lexical/markdown";
 import EditorTheme from "@/components/editor/EditorTheme";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -30,6 +30,30 @@ import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibili
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings } from "@/lib/storage";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
+import { LexicalNode } from "lexical";
+
+// Custom horizontal rule transformer for markdown shortcut (---)
+const HORIZONTAL_RULE_TRANSFORMER: ElementTransformer = {
+    dependencies: [HorizontalRuleNode],
+    export: (node: LexicalNode) => {
+        return $isHorizontalRuleNode(node) ? '---' : null;
+    },
+    regExp: /^(---|\*\*\*|___)\s?$/,
+    replace: (parentNode, _children, _match, isImport) => {
+        const line = $createHorizontalRuleNode();
+
+        // When importing or if there's a next sibling, replace the paragraph
+        // Otherwise, insert before (keeps cursor in a new paragraph after)
+        if (isImport || parentNode.getNextSibling() != null) {
+            parentNode.replace(line);
+        } else {
+            parentNode.insertBefore(line);
+        }
+
+        line.selectNext();
+    },
+    type: 'element',
+};
 
 const editorConfig = {
     namespace: "KitaabEditor",
@@ -97,8 +121,9 @@ export default function KitaabApp() {
                             <AutoFocusPlugin />
                             <ListPlugin />
                             <LinkPlugin />
+                            <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
-                            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+                            <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />
                             <DebouncedAutoSavePlugin />
                             <ContentInitializationPlugin />
                             <IssueHighlighterPlugin />
