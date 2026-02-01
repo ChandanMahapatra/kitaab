@@ -233,7 +233,7 @@ function parseEvaluationResponse(response: string): EvaluationResult {
         } else if (lower.startsWith('suggestions:')) {
             inSuggestions = true;
         } else if (inSuggestions && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
-            const suggestion = line.replace(/^[-•\d]+\.\s*/, '').trim();
+            const suggestion = line.replace(/^[-•\d]+\.\s*|^-\s+/, '').trim();
             if (suggestion) suggestions.push(suggestion);
         }
     }
