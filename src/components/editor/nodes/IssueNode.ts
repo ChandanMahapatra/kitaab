@@ -43,7 +43,8 @@ export class IssueNode extends TextNode {
     }
 
     updateDOM(prevNode: IssueNode, dom: HTMLElement, config: EditorConfig): boolean {
-        const isUpdated = super.updateDOM(prevNode as unknown as TextNode, dom, config);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isUpdated = super.updateDOM(prevNode as any, dom, config);
         dom.classList.add(`issue-type-${this.__issueType}`);
         if (prevNode.__issueType !== this.__issueType) {
             // Simple class replacement strategy would be needed if type updates, 

@@ -3,7 +3,83 @@ name: kitaab-project
 description: Context and guidelines for working on the Kitaab Privacy-First Markdown Editor project.
 ---
 
-# Kitaab Project Context
+# Workflow Orchestration
+
+⚠️ **MANDATORY**: You **MUST** read this file **BEFORE** starting work and **AFTER** completing any task. This document contains critical workflow requirements that supersede all other instructions.
+
+## 1. Plan Mode Default
+
+- **Enter plan mode** for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, **STOP and re-plan immediately** - don't keep pushing
+- Use plan mode for **verification steps**, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+## 2. Subagent Strategy (Keep Main Context Clean)
+
+- **Offload** research, exploration, and parallel analysis to subagents
+- For complex problems, **throw more compute at it** via subagents
+- **One task per subagent** for focused execution
+- Never do exploration work in the main context window
+
+## 3. Self-Improvement Loop
+
+- After **ANY correction** from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that **prevent the same mistake**
+- Ruthlessly iterate on these lessons until mistake rate drops
+- **Review lessons at session start** for relevant project
+
+## 4. Verification Before Done
+
+- **Never mark a task complete** without proving it works
+- **For UI tasks**: follow **UI Testing & Validation** protocol (check console errors, DevTools issues)
+- Diff behavior between main and your changes when relevant
+- Ask yourself: *"Would a staff engineer approve this?"*
+- **Run tests**, check logs, demonstrate correctness
+
+## 5. Demand Elegance (Balanced)
+
+- For non-trivial changes: pause and ask *"is there a more elegant way?"*
+- If a fix feels hacky: *"Knowing everything I know now, implement the elegant solution"*
+- **Skip this** for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
+
+## 6. Autonomous Bug Fixing
+
+- When given a bug report: **just fix it**. Don't ask for hand-holding
+- Point at logs, errors, failing tests → then resolve them
+- **Zero context switching** required from the user
+- Go fix failing CI tests without being told how
+
+## 7. UI Testing & Validation
+
+For all UI-related tasks:
+- **Use browsermcp or playwright mcp** to test the implementation
+- **Check Chrome DevTools** for:
+  - Console errors (JavaScript errors, warnings, unhandled exceptions)
+  - Network request failures
+  - Performance issues or slow renders
+- **Verify responsive behavior** across breakpoints
+- **Fix all issues** before marking task complete
+- Document any console errors in task notes
+
+## Task Management
+
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+
+---
+
+# Project Context
 
 This document provides context, conventions, and guidelines for agents working on the Kitaab markdown editor.
 
@@ -163,10 +239,24 @@ src/
 ```
 
 ### Development Rules
-1.  **Visual Fidelity**: Always compare implementation against `code.html`. The goal is to look *exactly* like that template.
-2.  **Responsiveness**: Editor area is fluid, Sidebar is fixed width (hidden/drawer on mobile).
-3.  **State Management**: Use React Context or simple prop drilling for Editor <-> Sidebar communication. Analysis runs in `useEffect` with debounce (300ms).
-4.  **Testing**:
+
+**UI Development Compliance (Mandatory)**:
+- Follow the **Design System** section in AGENTS.md as the authoritative reference
+- Use **Base UI** (`@base-ui-components/react`) for all primitives
+- Strictly adhere to color palette:
+  - Primary: `#546e7a` (Steel Blue)
+  - Background Light: `#f5f5f5`, Dark: `#121212`
+  - Sidebar: `#eeeeee` (light), `#1a1a1a` (dark)
+  - Analysis indicators: Red `#e57373`, Amber `#ffb74d`, Purple `#ba68c8`, Blue `#64b5f6`, Emerald `#81c784`
+- Typography:
+  - Headings/Body: Lato font
+  - Code/Editor: IBM Plex Mono
+- Icons: Material Icons Round (`class="material-icons-round"`)
+- **After implementation**: Run UI Testing & Validation (see Workflow Principle #7)
+
+1.  **Responsiveness**: Editor area is fluid, Sidebar is fixed width (hidden/drawer on mobile).
+2.  **State Management**: Use React Context or simple prop drilling for Editor <-> Sidebar communication. Analysis runs in `useEffect` with debounce (300ms).
+3.  **Testing**:
     - Unit test `analysis.ts` heavily (it's pure logic).
     - Component test `Sidebar` for rendering correct stats.
 
@@ -180,4 +270,4 @@ src/
 - [ ] **Theme**: Light/Dark mode toggle (using Tailwind `dark:` classes).
 
 ---
-*Refer to `code.html` for any DOM structure or CSS class ambiguity. Refer to `logic.md` for exact formulas.*
+*Refer to `logic.md` for exact formulas.*

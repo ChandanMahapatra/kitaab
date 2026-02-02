@@ -11,7 +11,7 @@ interface SidebarProps {
     analysis: AnalysisResult | null;
     onHoverIssue?: (type: string | null) => void;
     onHoverHighlightChange?: (type: string | null) => void;
-    onTokensUpdate?: (tokens: number) => void;
+    onTokensUpdate?: (tokens: number, cost: number) => void;
 }
 
 export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onTokensUpdate }: SidebarProps) {
@@ -22,6 +22,7 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const [hoverHighlightEnabled, setHoverHighlightEnabled] = useState(false);
     const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
     const [aiConfigured, setAiConfigured] = useState(false);
+    const [showCostEstimate, setShowCostEstimate] = useState(true);
 
     const score = analysis?.score ?? 100;
     const gradeLevel = analysis?.gradeLevel ?? 0;
@@ -38,10 +39,14 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             const settings = await loadSettings();
             setHoverHighlightEnabled(settings?.hoverHighlightEnabled ?? false);
             setAiConfigured(!!(settings?.provider && settings?.apiKey));
+            setShowCostEstimate(settings?.showCostEstimate ?? true);
         };
         loadSettingsData();
         // Listen for settings changes via custom event dispatched by SettingsModal
-        const handleSettingsChange = () => checkAiConfig();
+        const handleSettingsChange = () => {
+            checkAiConfig();
+            loadSettingsData();
+        };
         window.addEventListener('kitaab-settings-changed', handleSettingsChange);
         return () => window.removeEventListener('kitaab-settings-changed', handleSettingsChange);
     }, []);
@@ -93,14 +98,22 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
 
     const getIssueColor = (type: string) => {
         switch (type) {
-            case 'veryComplex': return 'muted-red';
-            case 'complex': return 'muted-amber';
-            case 'hardWord': return 'muted-purple';
-            case 'adverb': return 'muted-blue';
-            case 'passive': return 'muted-emerald';
-            case 'qualifier': return 'primary';
-            default: return 'muted-amber';
+            case 'veryComplex': return '#e57373';  // Red - matches editor highlight
+            case 'complex': return '#ffb74d';      // Amber - matches editor highlight
+            case 'hardWord': return '#ba68c8';     // Purple - matches editor highlight
+            case 'adverb': return '#64b5f6';       // Blue - matches editor highlight
+            case 'passive': return '#81c784';      // Emerald - matches editor highlight
+            case 'qualifier': return '#546e7a';    // Primary - matches editor highlight
+            default: return '#ffb74d';
         }
+    };
+
+    // Convert hex to rgba with 0.3 opacity to match editor CSS
+    const getRgbaBackground = (hex: string): string => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, 0.3)`;
     };
 
     const getIssueLabel = (type: string) => {
@@ -200,11 +213,13 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             setEvaluation(result);
 
             const newTotalTokens = (settings.tokensUsed ?? 0) + (result.tokensUsed ?? 0);
-            onTokensUpdate?.(newTotalTokens);
+            const newTotalCost = (settings.totalCost ?? 0) + (result.cost ?? 0);
+            onTokensUpdate?.(newTotalTokens, newTotalCost);
 
             await saveSettings({
                 ...settings,
                 tokensUsed: newTotalTokens,
+                totalCost: newTotalCost,
             });
 
         } catch (err) {
@@ -283,7 +298,6 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
-                <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-2">Writing Issues</h3>
                 {Object.keys(issuesByType).length === 0 && !evaluation && (
                     <div className="text-xs opacity-40 text-center py-6">
                         No issues detected.
@@ -291,27 +305,53 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
                 )}
 
                 {Object.entries(issuesByType).map(([type, issues]) => {
-                    const colorClass = `text-${getIssueColor(type)}`;
+                    const issueColor = getIssueColor(type);
+                    const bgColor = getRgbaBackground(issueColor);
                     const isActive = activeIssueTypes.has(type as Issue['type']);
 
                     return (
                         <div
                             key={type}
                             className={cn(
-                                "p-3 border border-[var(--border-color)] rounded-lg transition-colors cursor-pointer",
-                                "hover:border-[var(--color-primary)] hover:bg-[var(--background)]",
+                                "p-3 border border-[var(--border-color)] rounded-lg transition-all duration-200 cursor-pointer",
                                 hoverHighlightEnabled && !isActive && "opacity-50"
                             )}
-                            onPointerEnter={() => handleHoverEnter(type)}
-                            onPointerLeave={handleHoverLeave}
+                            style={{
+                                borderColor: isActive ? issueColor : undefined,
+                            }}
+                            onPointerEnter={(e) => {
+                                handleHoverEnter(type);
+                                // Show full color + editor-matching background on hover
+                                const labelSpan = e.currentTarget.querySelector('.issue-label') as HTMLElement;
+                                if (labelSpan) labelSpan.style.color = issueColor;
+                                e.currentTarget.style.backgroundColor = bgColor;
+                            }}
+                            onPointerLeave={(e) => {
+                                handleHoverLeave();
+                                // Reset label color based on mode
+                                const labelSpan = e.currentTarget.querySelector('.issue-label') as HTMLElement;
+                                if (labelSpan) {
+                                    if (!hoverHighlightEnabled && !isActive) {
+                                        labelSpan.style.color = ''; // Reset to default in highlight off
+                                    }
+                                }
+                                e.currentTarget.style.backgroundColor = '';
+                            }}
                             onClick={() => toggleIssueType(type as Issue['type'])}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-xs font-bold capitalize ${hoverHighlightEnabled ? colorClass : 'opacity-60'}`}>{getIssueLabel(type)}</span>
-                                <span className={`text-xs font-bold ${hoverHighlightEnabled ? colorClass : 'opacity-40'} px-1.5 rounded`}>{issues.length}</span>
+                                <span 
+                                    className="issue-label text-xs font-bold uppercase tracking-wider"
+                                    style={{ color: hoverHighlightEnabled || isActive ? issueColor : undefined }}
+                                >
+                                    {getIssueLabel(type)}
+                                </span>
+                                <span className="text-xs font-bold px-1.5 rounded opacity-80">
+                                    {issues.length}
+                                </span>
                             </div>
                             {issues[0]?.suggestion && (
-                                <p className="text-[11px] opacity-40">{issues[0].suggestion}</p>
+                                <p className="text-[11px] opacity-60 leading-relaxed mt-1">{issues[0].suggestion}</p>
                             )}
                         </div>
                     );
@@ -327,6 +367,14 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
                                 </div>
                             ))}
                         </div>
+                        {(evaluation.tokensUsed || (showCostEstimate && evaluation.cost !== undefined)) && (
+                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
+                                <span>Tokens: {evaluation.tokensUsed?.toLocaleString()}</span>
+                                {showCostEstimate && (
+                                    <span>Cost: ${evaluation.cost?.toFixed(4)}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

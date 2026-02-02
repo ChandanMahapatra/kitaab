@@ -26,9 +26,11 @@ import { ContentInitializationPlugin } from "@/components/editor/plugins/Content
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
 import { AnalysisPlugin } from "@/components/editor/plugins/AnalysisPlugin";
 import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlighterPlugin";
+import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { AnalysisResult } from "@/lib/analysis";
-import { loadSettings } from "@/lib/storage";
+import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
+import { fetchModelPricing } from "@/lib/pricing";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
 import { LexicalNode } from "lexical";
 
@@ -82,14 +84,55 @@ export default function KitaabApp() {
     const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
     const [docTitle, setDocTitle] = useState("Untitled draft");
     const [persistedTokens, setPersistedTokens] = useState(0);
+    const [persistedCost, setPersistedCost] = useState(0);
+    const [showCostEstimate, setShowCostEstimate] = useState(true);
     const [hoveredIssueType, setHoveredIssueType] = useState<string | null>(null);
 
     useEffect(() => {
-        const loadPersistedTokens = async () => {
+        const loadPersistedStats = async () => {
             const settings = await loadSettings();
             setPersistedTokens(settings?.tokensUsed ?? 0);
+            setPersistedCost(settings?.totalCost ?? 0);
+            setShowCostEstimate(settings?.showCostEstimate ?? true);
         };
-        loadPersistedTokens();
+        loadPersistedStats();
+    }, []);
+
+    useEffect(() => {
+        const handleSettingsChange = async () => {
+            const settings = await loadSettings();
+            setPersistedTokens(settings?.tokensUsed ?? 0);
+            setPersistedCost(settings?.totalCost ?? 0);
+            setShowCostEstimate(settings?.showCostEstimate ?? true);
+        };
+        window.addEventListener('kitaab-settings-changed', handleSettingsChange);
+        return () => window.removeEventListener('kitaab-settings-changed', handleSettingsChange);
+    }, []);
+
+    useEffect(() => {
+        const fetchAndCachePricing = async () => {
+            try {
+                const cached = await loadPricingCache();
+                const cacheAge = cached?.lastUpdated ? Date.now() - new Date(cached.lastUpdated).getTime() : Infinity;
+                const oneDay = 24 * 60 * 60 * 1000;
+                
+                // Fetch if no cache or cache is older than 1 day
+                if (!cached || cacheAge > oneDay) {
+                    const pricing = await fetchModelPricing();
+                    if (pricing && pricing.length > 0) {
+                        const pricingMap = pricing.reduce((acc, model) => {
+                            acc[model.id] = model;
+                            return acc;
+                        }, {} as Record<string, any>);
+                        await savePricingCache(pricingMap);
+                        console.log('Pricing cache updated');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch pricing:', error);
+            }
+        };
+        fetchAndCachePricing();
     }, []);
 
     return (
@@ -127,6 +170,7 @@ export default function KitaabApp() {
                             <DebouncedAutoSavePlugin />
                             <ContentInitializationPlugin />
                             <IssueHighlighterPlugin />
+                            <SentenceHighlighterPlugin analysis={analysis} />
                             <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
                         </div>
@@ -136,7 +180,10 @@ export default function KitaabApp() {
                         analysis={analysis}
                         onHoverIssue={setHoveredIssueType}
                         onHoverHighlightChange={(type) => setHoveredIssueType(type)}
-                        onTokensUpdate={setPersistedTokens}
+                        onTokensUpdate={(tokens, cost) => {
+                            setPersistedTokens(tokens);
+                            setPersistedCost(cost);
+                        }}
                     />
 
                 </div>
@@ -146,11 +193,13 @@ export default function KitaabApp() {
                         <span>Characters: <span className="text-[var(--foreground)] opacity-70">{analysis?.charCount || 0}</span></span>
                         <span>Words: <span className="text-[var(--foreground)] opacity-70">{analysis?.wordCount || 0}</span></span>
                         <span>Reading Time: <span className="text-[var(--foreground)] opacity-70">{Math.ceil(analysis?.readingTime || 0)} min</span></span>
-                        {persistedTokens > 0 && (
-                            <span>Tokens: <span className="text-[var(--foreground)] opacity-70">{persistedTokens.toLocaleString()}</span></span>
-                        )}
                     </div>
                     <div className="flex items-center gap-4">
+                        {persistedTokens > 0 && (
+                            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-50">
+                                Tokens: <span className="text-[var(--foreground)] opacity-70">{persistedTokens.toLocaleString()}</span>
+                            </span>
+                        )}
                         <StatusIndicator />
                     </div>
                 </footer>

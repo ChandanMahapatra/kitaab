@@ -19,6 +19,28 @@ export interface AnalysisResult {
 }
 
 export const COMPLEX_WORD_SYLLABLES = 4;
+export const SENTENCE_REGEX = /[^.!?]+[.!?]+/g;
+export const WORD_REGEX = /\b\w+\b/g;
+
+export interface SentenceMatch {
+    text: string;
+    wordCount: number;
+    type: 'complex' | 'veryComplex' | null;
+}
+
+export function analyzeSentence(sentenceText: string): SentenceMatch {
+    const words = sentenceText.match(WORD_REGEX) || [];
+    const wordCount = words.length;
+    let type: 'complex' | 'veryComplex' | null = null;
+
+    if (wordCount > 35) {
+        type = 'veryComplex';
+    } else if (wordCount > 25) {
+        type = 'complex';
+    }
+
+    return { text: sentenceText, wordCount, type };
+}
 
 export function isComplexWord(word: string): boolean {
     return syllableCount(word) >= COMPLEX_WORD_SYLLABLES;
@@ -122,37 +144,40 @@ export function analyzeText(text: string): AnalysisResult {
     }
 
     // 3. Complex Sentences (>25 words) and very hard sentences (>35 words)
-    // We need to map sentences back to their position in original text. 
-    // This is tricky with simple split. We'll use a regex loop for sentences.
-    const sentenceRegex = /[^.!?]+[.!?]+(\s+|$)/g;
-    while ((match = sentenceRegex.exec(text)) !== null) {
-        const sentenceText = match[0];
-        const sWords = sentenceText.match(/\b\w+\b/g) || [];
-
-        if (sWords.length > 35) {
-            issues.push({
-                type: 'veryComplex',
-                index: match.index,
-                length: sentenceText.length,
-                text: sentenceText.trim(),
-                suggestion: 'Split into smaller sentences'
-            });
-        } else if (sWords.length > 25) {
-            issues.push({
-                type: 'complex',
-                index: match.index,
-                length: sentenceText.length,
-                text: sentenceText.trim(),
-                suggestion: 'Split into smaller sentences'
-            });
+    // Process each line/paragraph separately to ensure we don't cross paragraph boundaries
+    const lines = text.split(/\n/);
+    let currentIndex = 0;
+    
+    for (const line of lines) {
+        if (line.trim().length > 0) {
+            SENTENCE_REGEX.lastIndex = 0;
+            let sentenceMatch;
+            
+            while ((sentenceMatch = SENTENCE_REGEX.exec(line)) !== null) {
+                const sentenceText = sentenceMatch[0];
+                const sentenceAnalysis = analyzeSentence(sentenceText);
+                const sentenceIndex = currentIndex + sentenceMatch.index;
+                
+                if (sentenceAnalysis.type) {
+                    issues.push({
+                        type: sentenceAnalysis.type,
+                        index: sentenceIndex,
+                        length: sentenceText.length,
+                        text: sentenceText.trim(),
+                        suggestion: 'Split into smaller sentences'
+                    });
+                }
+            }
         }
+        // Move index past this line and its newline
+        currentIndex += line.length + 1;
     }
 
     // 4. Complex Words / Hard Words
     // Logic.md: "Hard words (3+ syllables)", "Very hard words (4+ syllables)"
     let wordMatch;
-    const wordRegex = /\b\w+\b/g;
-    while ((wordMatch = wordRegex.exec(text)) !== null) {
+    WORD_REGEX.lastIndex = 0;
+    while ((wordMatch = WORD_REGEX.exec(text)) !== null) {
         const word = wordMatch[0];
         if (isComplexWord(word)) {
             issues.push({

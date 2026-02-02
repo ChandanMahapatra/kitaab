@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Lato, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const lato = Lato({
   variable: "--font-display",
@@ -32,7 +33,9 @@ export default function RootLayout({
       <body
         className={`${lato.variable} ${ibmPlexMono.variable} antialiased`}
       >
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

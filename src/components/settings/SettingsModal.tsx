@@ -19,6 +19,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
     const [status, setStatus] = React.useState<'idle' | 'testing' | 'success' | 'error'>('idle');
     const [message, setMessage] = React.useState("");
+    const [tokensUsed, setTokensUsed] = React.useState(0);
+    const [totalCost, setTotalCost] = React.useState(0);
+    const [showCostEstimate, setShowCostEstimate] = React.useState(false);
 
     React.useEffect(() => {
         if (open) {
@@ -28,6 +31,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     setApiKey(settings.apiKey || "");
                     setModel(settings.model || "");
                     setBaseURL(settings.baseURL || "");
+                    setTokensUsed(settings.tokensUsed || 0);
+                    setTotalCost(settings.totalCost || 0);
+                    setShowCostEstimate(settings.showCostEstimate ?? true);
                 }
             });
             setStatus('idle');
@@ -55,7 +61,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         if (isConnected) {
             setStatus('success');
             setMessage("Connected successfully!");
-            await saveSettings({ provider, apiKey, model, baseURL });
+            await saveSettings({ provider, apiKey, model, baseURL, showCostEstimate });
             window.dispatchEvent(new Event('kitaab-settings-changed'));
             setTimeout(() => onOpenChange(false), 1000);
         } else {
@@ -65,13 +71,26 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     };
 
     const handleClearSettings = async () => {
-        await saveSettings({ provider: undefined, apiKey: undefined, model: undefined, baseURL: undefined, tokensUsed: 0, totalCost: 0, hoverHighlightEnabled: false });
+        await saveSettings({ provider: undefined, apiKey: undefined, model: undefined, baseURL: undefined, tokensUsed: 0, totalCost: 0, hoverHighlightEnabled: false, showCostEstimate: true });
         setProvider("");
         setApiKey("");
         setModel("");
         setBaseURL("");
+        setTokensUsed(0);
+        setTotalCost(0);
+        setShowCostEstimate(true);
         window.dispatchEvent(new Event('kitaab-settings-changed'));
         onOpenChange(false);
+    };
+
+    const handleResetStats = async () => {
+        const settings = await loadSettings();
+        if (settings) {
+            await saveSettings({ ...settings, tokensUsed: 0, totalCost: 0 });
+        }
+        setTokensUsed(0);
+        setTotalCost(0);
+        window.dispatchEvent(new Event('kitaab-settings-changed'));
     };
 
     const selectedProvider = providers.find(p => p.id === provider);
@@ -154,6 +173,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 />
                             </fieldset>
                         )}
+
+                        {provider && (
+                            <fieldset className="flex items-center gap-3">
+                                <input
+                                    id="showCostEstimate"
+                                    type="checkbox"
+                                    checked={showCostEstimate}
+                                    onChange={(e) => setShowCostEstimate(e.target.checked)}
+                                    className="h-4 w-4 rounded border-[var(--border-color)] bg-transparent text-primary focus:ring-primary"
+                                />
+                                <label htmlFor="showCostEstimate" className="text-sm font-semibold opacity-80 cursor-pointer">
+                                    Show cost estimates in UI
+                                </label>
+                            </fieldset>
+                        )}
                     </div>
 
                     <div className="mt-2 text-sm">
@@ -161,6 +195,26 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         {status === 'success' && <div className="text-muted-emerald flex items-center gap-2"><Check className="w-4 h-4" /> {message}</div>}
                         {status === 'error' && <div className="text-red-500 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {message}</div>}
                     </div>
+
+                    {tokensUsed > 0 && (
+                        <div className="mt-4 p-3 border border-[var(--border-color)] rounded-lg bg-[var(--background)]">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-semibold opacity-80">AI Usage Stats</span>
+                                <button
+                                    onClick={handleResetStats}
+                                    className="text-[10px] opacity-50 hover:opacity-100 transition-opacity underline"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                            <div className="flex gap-4 text-xs">
+                                <span className="opacity-60">Tokens: <span className="font-semibold opacity-80">{tokensUsed.toLocaleString()}</span></span>
+                                {showCostEstimate && (
+                                    <span className="opacity-60">Cost: <span className="font-semibold opacity-80">${totalCost.toFixed(4)}</span></span>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="mt-[25px] flex justify-between gap-[10px]">
                         <button

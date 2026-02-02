@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { FORMAT_TEXT_COMMAND, TextFormatType, $getSelection, $isRangeSelection, $createParagraphNode } from "lexical";
-import { Bold, Italic, List, Link as LinkIcon, Settings, Share, Palette, FileText, FileCode, FileType, Check, Strikethrough, Code, Code2, Heading, Quote, Minus } from "lucide-react";
+import { Bold, Italic, List, Link as LinkIcon, Settings, Share, Palette, FileText, FileCode, FileType, Check, Strikethrough, Code, Code2, Heading, Quote, Minus, Copy } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode, REMOVE_LIST_COMMAND } from "@lexical/list";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $setBlocksType } from "@lexical/selection";
@@ -29,6 +30,7 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
     const [theme, setTheme] = useState<Theme>('light');
     const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    const copyToClipboard = useCopyToClipboard();
 
     const applyTheme = (t: Theme) => {
         const root = document.documentElement;
@@ -222,6 +224,15 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={copyToClipboard}
+                        className={buttonClass}
+                        aria-label="Copy to clipboard"
+                        title="Copy as Markdown"
+                    >
+                        <Copy className="w-4 h-4" />
+                    </button>
+
                     <DropdownMenu.Root onOpenChange={setIsThemeMenuOpen}>
                         <DropdownMenu.Trigger asChild>
                             <button className={cn(buttonClass, isThemeMenuOpen && "bg-neutral-200 dark:bg-neutral-800")} aria-label="Change Theme" title="Change theme">
