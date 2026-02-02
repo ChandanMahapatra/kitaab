@@ -105,9 +105,8 @@ function removeAllSentenceIssueNodes(editor: ReturnType<typeof useLexicalCompose
 function applySentenceHighlights(issues: Issue[], markdown: string) {
     const root = $getRoot();
     
-    // Build a mapping of markdown positions to editor nodes
-    // This is complex because markdown and editor structure differ
-    // We'll use a character-by-character approach
+    // Build a precise mapping of markdown positions to editor nodes
+    // by walking the editor tree and matching text content with markdown
     
     type PositionInfo = {
         node: TextNode;
@@ -116,35 +115,60 @@ function applySentenceHighlights(issues: Issue[], markdown: string) {
     };
     
     const positionMap: PositionInfo[] = [];
-    let currentMarkdownPos = 0;
+    let markdownPos = 0;
     
-    // Traverse the editor tree and build position mapping
-    const buildPositionMap = (node: LexicalNode) => {
+    // Collect all text nodes from the editor in order
+    const textNodes: TextNode[] = [];
+    const collectTextNodes = (node: LexicalNode) => {
         if ($isTextNode(node) && !$isIssueNode(node)) {
-            const text = node.getTextContent();
-            positionMap.push({
-                node,
-                offset: 0,
-                markdownPos: currentMarkdownPos
-            });
-            currentMarkdownPos += text.length;
+            textNodes.push(node);
         } else if ($isIssueNode(node)) {
-            // Skip issue nodes - their content is already counted in the analysis
-            // But we need to account for their length in position tracking
-            const text = node.getTextContent();
-            currentMarkdownPos += text.length;
+            // Include issue nodes too - we need to track their content
+            textNodes.push(node as unknown as TextNode);
         } else if ('getChildren' in node && typeof node.getChildren === 'function') {
             const children = node.getChildren();
-            children.forEach(buildPositionMap);
-            
-            // Account for newlines between block-level elements in markdown
-            if (node.getType() === 'paragraph' || node.getType() === 'heading') {
-                currentMarkdownPos += 1; // \n
-            }
+            children.forEach(collectTextNodes);
         }
     };
     
-    buildPositionMap(root);
+    collectTextNodes(root);
+    
+    // Build position mapping by matching text nodes to markdown
+    // This handles the complex relationship between editor structure and markdown
+    for (const node of textNodes) {
+        const text = node.getTextContent();
+        if (text.length === 0) continue;
+        
+        // Find this text in the markdown at or after current position
+        const searchStart = markdownPos;
+        const foundIndex = markdown.indexOf(text, searchStart);
+        
+        if (foundIndex !== -1) {
+            // Found the text in markdown
+            if (!$isIssueNode(node)) {
+                positionMap.push({
+                    node: node as TextNode,
+                    offset: 0,
+                    markdownPos: foundIndex
+                });
+            }
+            markdownPos = foundIndex + text.length;
+        } else {
+            // Text not found at expected position, try searching from beginning
+            // (handles cases where editor structure differs from markdown)
+            const foundFromStart = markdown.indexOf(text);
+            if (foundFromStart !== -1 && !$isIssueNode(node)) {
+                positionMap.push({
+                    node: node as TextNode,
+                    offset: 0,
+                    markdownPos: foundFromStart
+                });
+            }
+        }
+    }
+    
+    // Sort position map by markdown position for proper ordering
+    positionMap.sort((a, b) => a.markdownPos - b.markdownPos);
     
     // Now apply highlights for each issue
     for (const issue of issues) {

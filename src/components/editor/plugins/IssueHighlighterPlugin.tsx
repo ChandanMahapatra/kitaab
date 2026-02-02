@@ -4,13 +4,11 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useEffect } from "react";
 import { TextNode } from "lexical";
 import { $createIssueNode, IssueNode, $isIssueNode } from "@/components/editor/nodes/IssueNode";
-import { isComplexWord } from "@/lib/analysis";
+import { isComplexWord, WORD_REGEX } from "@/lib/analysis";
 
 const ADVERB_REGEX = /\b\w+ly\b/gi;
 const PASSIVE_REGEX = /\b(is|are|was|were|be|been|being)\s+(\w+ed|\w+en)\b/gi;
 const QUALIFIER_REGEX = /\b(I think|we think|I believe|we believe|maybe|perhaps|possibly|probably|I guess|we guess|kind of|sort of|a bit|a little|really|extremely|incredibly)\b/gi;
-const WORD_REGEX = /\b\w+\b/g;
-const SENTENCE_REGEX = /[^.!?]+[.!?]+(\s+|$)/g;
 
 function findMatchIndex(text: string, regex: RegExp): { start: number, end: number, match: string } | null {
     regex.lastIndex = 0;
@@ -33,21 +31,7 @@ function findHardWordMatch(text: string): { start: number, end: number, match: s
     return null;
 }
 
-function findComplexSentenceMatch(text: string): { start: number, end: number, match: string, type: 'complex' | 'veryComplex' } | null {
-    SENTENCE_REGEX.lastIndex = 0;
-    let sentenceMatch;
-    while ((sentenceMatch = SENTENCE_REGEX.exec(text)) !== null) {
-        const sentenceText = sentenceMatch[0];
-        const words = sentenceText.match(WORD_REGEX) || [];
-        if (words.length > 35) {
-            return { start: sentenceMatch.index, end: sentenceMatch.index + sentenceText.length, match: sentenceText, type: 'veryComplex' };
-        }
-        if (words.length > 25) {
-            return { start: sentenceMatch.index, end: sentenceMatch.index + sentenceText.length, match: sentenceText, type: 'complex' };
-        }
-    }
-    return null;
-}
+
 
 export function IssueHighlighterPlugin() {
     const [editor] = useLexicalComposerContext();
@@ -81,20 +65,11 @@ export function IssueHighlighterPlugin() {
                 const hardWordMatch = findHardWordMatch(text);
                 if (hardWordMatch) matches.push({ ...hardWordMatch, type: 'hardWord' });
 
-                const complexMatch = findComplexSentenceMatch(text);
-                if (complexMatch) matches.push({ start: complexMatch.start, end: complexMatch.end, match: complexMatch.match, type: complexMatch.type });
-
                 if (matches.length === 0) break;
 
-                // Prioritize word-level issues (adverb, passive, qualifier, hardWord) over sentence-level
-                // This ensures words inside complex sentences still get highlighted
-                const wordLevelMatches = matches.filter(m => m.type === 'adverb' || m.type === 'passive' || m.type === 'qualifier' || m.type === 'hardWord');
-                const sentenceLevelMatches = matches.filter(m => m.type === 'complex' || m.type === 'veryComplex');
-                
-                // Prefer word-level matches first, then sentence-level
-                const prioritizedMatches = wordLevelMatches.length > 0 ? wordLevelMatches : sentenceLevelMatches;
-                
-                const bestMatch = prioritizedMatches.reduce((best, current) => {
+                // Sort all matches by start position
+                // When matches overlap (same start), prefer word-level (shorter) over sentence-level (longer)
+                const bestMatch = matches.reduce((best, current) => {
                     if (current.start < best.start) return current;
                     if (current.start === best.start) {
                         const bestLen = best.end - best.start;
