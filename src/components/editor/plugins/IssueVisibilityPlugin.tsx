@@ -80,20 +80,23 @@ export function IssueVisibilityPlugin({ hoveredIssueType, enabled }: IssueVisibi
 
                     if (hoveredIssueType === null) {
                         element.classList.remove('issue-visible');
+                        element.classList.remove('issue-underline-only');
                         return;
                     }
 
                     if (hoveredIssueType === '__all__') {
-                        // In "Highlight On" mode, only show issues for types that are toggled on
+                        // In "Highlight On" mode, show underline-only for types that are toggled on
                         if (issueType && activeTypes.has(issueType)) {
-                            element.classList.add('issue-visible');
+                            element.classList.add('issue-underline-only');
+                            element.classList.remove('issue-visible');
                         } else {
+                            element.classList.remove('issue-underline-only');
                             element.classList.remove('issue-visible');
                         }
                         return;
                     }
 
-                    // Hover mode: only show the specific hovered type
+                    // Hover mode: show full highlight (background + underline) for the specific hovered type
                     const typeClass = `issue-highlight-${hoveredIssueType === 'adverb' ? 'blue' :
                         hoveredIssueType === 'passive' ? 'emerald' :
                             hoveredIssueType === 'veryComplex' ? 'red' :
@@ -103,8 +106,10 @@ export function IssueVisibilityPlugin({ hoveredIssueType, enabled }: IssueVisibi
 
                     if (element.classList.contains(typeClass)) {
                         element.classList.add('issue-visible');
+                        element.classList.remove('issue-underline-only');
                     } else {
                         element.classList.remove('issue-visible');
+                        element.classList.remove('issue-underline-only');
                     }
                 });
             });

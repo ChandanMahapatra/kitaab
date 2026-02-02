@@ -93,43 +93,35 @@ body {
 
 .issue-highlight-yellow {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-amber {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-red {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-purple {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-blue {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
     text-decoration: none !important;
 }
 
 .issue-highlight-emerald {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-highlight-primary {
     background-color: transparent !important;
-    border-bottom-color: transparent !important;
 }
 
 .issue-muted {
   background-color: transparent !important;
-  border-bottom-color: transparent !important;
 }
 
 .issue-visible {
@@ -164,6 +156,36 @@ body {
 
 .issue-visible.issue-highlight-primary {
     background-color: rgba(84, 110, 122, 0.3) !important;
+    border-bottom-color: #546e7a !important;
+}
+
+/* Underline-only state for "Highlight: On" mode (background on hover) */
+.issue-underline-only {
+    background-color: transparent !important;
+    border-bottom: 2px solid #ffb74d !important;
+}
+
+.issue-underline-only.issue-highlight-red {
+    border-bottom-color: #e57373 !important;
+}
+
+.issue-underline-only.issue-highlight-purple {
+    border-bottom-color: #ba68c8 !important;
+}
+
+.issue-underline-only.issue-highlight-blue {
+    border-bottom-color: #64b5f6 !important;
+}
+
+.issue-underline-only.issue-highlight-amber {
+    border-bottom-color: #ffb74d !important;
+}
+
+.issue-underline-only.issue-highlight-emerald {
+    border-bottom-color: #81c784 !important;
+}
+
+.issue-underline-only.issue-highlight-primary {
     border-bottom-color: #546e7a !important;
 }
 
