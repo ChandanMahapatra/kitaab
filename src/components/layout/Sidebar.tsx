@@ -11,7 +11,7 @@ interface SidebarProps {
     analysis: AnalysisResult | null;
     onHoverIssue?: (type: string | null) => void;
     onHoverHighlightChange?: (type: string | null) => void;
-    onTokensUpdate?: (tokens: number) => void;
+    onTokensUpdate?: (tokens: number, cost: number) => void;
 }
 
 export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onTokensUpdate }: SidebarProps) {
@@ -22,6 +22,7 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const [hoverHighlightEnabled, setHoverHighlightEnabled] = useState(false);
     const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
     const [aiConfigured, setAiConfigured] = useState(false);
+    const [showCostEstimate, setShowCostEstimate] = useState(true);
 
     const score = analysis?.score ?? 100;
     const gradeLevel = analysis?.gradeLevel ?? 0;
@@ -38,10 +39,14 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             const settings = await loadSettings();
             setHoverHighlightEnabled(settings?.hoverHighlightEnabled ?? false);
             setAiConfigured(!!(settings?.provider && settings?.apiKey));
+            setShowCostEstimate(settings?.showCostEstimate ?? true);
         };
         loadSettingsData();
         // Listen for settings changes via custom event dispatched by SettingsModal
-        const handleSettingsChange = () => checkAiConfig();
+        const handleSettingsChange = () => {
+            checkAiConfig();
+            loadSettingsData();
+        };
         window.addEventListener('kitaab-settings-changed', handleSettingsChange);
         return () => window.removeEventListener('kitaab-settings-changed', handleSettingsChange);
     }, []);
@@ -200,11 +205,13 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             setEvaluation(result);
 
             const newTotalTokens = (settings.tokensUsed ?? 0) + (result.tokensUsed ?? 0);
-            onTokensUpdate?.(newTotalTokens);
+            const newTotalCost = (settings.totalCost ?? 0) + (result.cost ?? 0);
+            onTokensUpdate?.(newTotalTokens, newTotalCost);
 
             await saveSettings({
                 ...settings,
                 tokensUsed: newTotalTokens,
+                totalCost: newTotalCost,
             });
 
         } catch (err) {
@@ -327,6 +334,14 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
                                 </div>
                             ))}
                         </div>
+                        {(evaluation.tokensUsed || (showCostEstimate && evaluation.cost !== undefined)) && (
+                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
+                                <span>Tokens: {evaluation.tokensUsed?.toLocaleString()}</span>
+                                {showCostEstimate && (
+                                    <span>Cost: ${evaluation.cost?.toFixed(4)}</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

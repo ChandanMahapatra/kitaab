@@ -46,6 +46,9 @@ export interface TokenUsage {
     cost: number;
 }
 
+import { calculateCostWithPricing } from './pricing';
+import { loadPricingCache } from './storage';
+
 const MODEL_PRICING: Record<string, { inputPer1K: number; outputPer1K: number }> = {
     'gpt-4': { inputPer1K: 0.03, outputPer1K: 0.06 },
     'gpt-3.5-turbo': { inputPer1K: 0.0005, outputPer1K: 0.0015 },
@@ -55,16 +58,6 @@ const MODEL_PRICING: Record<string, { inputPer1K: number; outputPer1K: number }>
     'anthropic/claude-3-haiku-20240307': { inputPer1K: 0.00025, outputPer1K: 0.00125 },
     'google/gemini-pro-1.5': { inputPer1K: 0.000125, outputPer1K: 0.0005 },
 };
-
-function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
-    const pricing = MODEL_PRICING[model];
-    if (!pricing) {
-        return 0;
-    }
-    const inputCost = (inputTokens / 1000) * pricing.inputPer1K;
-    const outputCost = (outputTokens / 1000) * pricing.outputPer1K;
-    return inputCost + outputCost;
-}
 
 export async function testConnection(providerId: string, apiKey: string, baseURL?: string): Promise<boolean> {
     const provider = providers.find(p => p.id === providerId);
@@ -208,7 +201,8 @@ ${text}`;
 
     const result = parseEvaluationResponse(content);
     const tokensUsed = inputTokens + outputTokens;
-    const cost = calculateCost(model, inputTokens, outputTokens);
+    const pricingCache = await loadPricingCache();
+    const cost = calculateCostWithPricing(model, inputTokens, outputTokens, pricingCache?.data || {});
 
     return {
         ...result,
