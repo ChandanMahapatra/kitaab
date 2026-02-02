@@ -27,6 +27,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.27.5",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
     "idb": "^8.0.3",
     "jspdf": "^4.0.0",
     "lexical": "^0.39.0",

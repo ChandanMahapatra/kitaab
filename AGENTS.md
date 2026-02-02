@@ -31,6 +31,7 @@ description: Context and guidelines for working on the Kitaab Privacy-First Mark
 ## 4. Verification Before Done
 
 - **Never mark a task complete** without proving it works
+- **For UI tasks**: follow **UI Testing & Validation** protocol (check console errors, DevTools issues)
 - Diff behavior between main and your changes when relevant
 - Ask yourself: *"Would a staff engineer approve this?"*
 - **Run tests**, check logs, demonstrate correctness
@@ -48,6 +49,18 @@ description: Context and guidelines for working on the Kitaab Privacy-First Mark
 - Point at logs, errors, failing tests → then resolve them
 - **Zero context switching** required from the user
 - Go fix failing CI tests without being told how
+
+## 7. UI Testing & Validation
+
+For all UI-related tasks:
+- **Use browsermcp or playwright mcp** to test the implementation
+- **Check Chrome DevTools** for:
+  - Console errors (JavaScript errors, warnings, unhandled exceptions)
+  - Network request failures
+  - Performance issues or slow renders
+- **Verify responsive behavior** across breakpoints
+- **Fix all issues** before marking task complete
+- Document any console errors in task notes
 
 ## Task Management
 
@@ -226,10 +239,24 @@ src/
 ```
 
 ### Development Rules
-1.  **Visual Fidelity**: Always compare implementation against `code.html`. The goal is to look *exactly* like that template.
-2.  **Responsiveness**: Editor area is fluid, Sidebar is fixed width (hidden/drawer on mobile).
-3.  **State Management**: Use React Context or simple prop drilling for Editor <-> Sidebar communication. Analysis runs in `useEffect` with debounce (300ms).
-4.  **Testing**:
+
+**UI Development Compliance (Mandatory)**:
+- Follow the **Design System** section in AGENTS.md as the authoritative reference
+- Use **Base UI** (`@base-ui-components/react`) for all primitives
+- Strictly adhere to color palette:
+  - Primary: `#546e7a` (Steel Blue)
+  - Background Light: `#f5f5f5`, Dark: `#121212`
+  - Sidebar: `#eeeeee` (light), `#1a1a1a` (dark)
+  - Analysis indicators: Red `#e57373`, Amber `#ffb74d`, Purple `#ba68c8`, Blue `#64b5f6`, Emerald `#81c784`
+- Typography:
+  - Headings/Body: Lato font
+  - Code/Editor: IBM Plex Mono
+- Icons: Material Icons Round (`class="material-icons-round"`)
+- **After implementation**: Run UI Testing & Validation (see Workflow Principle #7)
+
+1.  **Responsiveness**: Editor area is fluid, Sidebar is fixed width (hidden/drawer on mobile).
+2.  **State Management**: Use React Context or simple prop drilling for Editor <-> Sidebar communication. Analysis runs in `useEffect` with debounce (300ms).
+3.  **Testing**:
     - Unit test `analysis.ts` heavily (it's pure logic).
     - Component test `Sidebar` for rendering correct stats.
 
@@ -243,4 +270,4 @@ src/
 - [ ] **Theme**: Light/Dark mode toggle (using Tailwind `dark:` classes).
 
 ---
-*Refer to `code.html` for any DOM structure or CSS class ambiguity. Refer to `logic.md` for exact formulas.*
+*Refer to `logic.md` for exact formulas.*
