@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -28,6 +28,7 @@ import { AnalysisPlugin } from "@/components/editor/plugins/AnalysisPlugin";
 import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlighterPlugin";
 import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
+import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
@@ -87,6 +88,19 @@ export default function KitaabApp() {
     const [persistedCost, setPersistedCost] = useState(0);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
     const [hoveredIssueType, setHoveredIssueType] = useState<string | null>(null);
+
+    const handleHoverHighlightChange = useCallback(
+        (type: string | null) => setHoveredIssueType(type),
+        []
+    );
+
+    const handleTokensUpdate = useCallback(
+        (tokens: number, cost: number) => {
+            setPersistedTokens(tokens);
+            setPersistedCost(cost);
+        },
+        []
+    );
 
     useEffect(() => {
         const loadPersistedStats = async () => {
@@ -167,6 +181,7 @@ export default function KitaabApp() {
                             <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
                             <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />
+                            <MarkdownCachePlugin />
                             <DebouncedAutoSavePlugin />
                             <ContentInitializationPlugin />
                             <IssueHighlighterPlugin />
@@ -179,35 +194,38 @@ export default function KitaabApp() {
                     <Sidebar
                         analysis={analysis}
                         onHoverIssue={setHoveredIssueType}
-                        onHoverHighlightChange={(type) => setHoveredIssueType(type)}
-                        onTokensUpdate={(tokens, cost) => {
-                            setPersistedTokens(tokens);
-                            setPersistedCost(cost);
-                        }}
+                        onHoverHighlightChange={handleHoverHighlightChange}
+                        onTokensUpdate={handleTokensUpdate}
                     />
 
                 </div>
 
-                <footer className="h-10 border-t border-[var(--border-color)] flex items-center justify-between px-6 bg-[var(--background)] w-full z-10 transition-colors duration-300">
-                    <div className="flex items-center gap-6 text-[10px] uppercase tracking-wider font-semibold opacity-50">
-                        <span>Characters: <span className="text-[var(--foreground)] opacity-70">{analysis?.charCount || 0}</span></span>
-                        <span>Words: <span className="text-[var(--foreground)] opacity-70">{analysis?.wordCount || 0}</span></span>
-                        <span>Reading Time: <span className="text-[var(--foreground)] opacity-70">{Math.ceil(analysis?.readingTime || 0)} min</span></span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {persistedTokens > 0 && (
-                            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-50">
-                                Tokens: <span className="text-[var(--foreground)] opacity-70">{persistedTokens.toLocaleString()}</span>
-                            </span>
-                        )}
-                        <StatusIndicator />
-                    </div>
-                </footer>
+                <Footer analysis={analysis} persistedTokens={persistedTokens} />
 
             </div>
         </LexicalComposer>
     );
 }
+
+const Footer = memo(function Footer({ analysis, persistedTokens }: { analysis: AnalysisResult | null; persistedTokens: number }) {
+    return (
+        <footer className="h-10 border-t border-[var(--border-color)] flex items-center justify-between px-6 bg-[var(--background)] w-full z-10 transition-colors duration-300">
+            <div className="flex items-center gap-6 text-[10px] uppercase tracking-wider font-semibold opacity-50">
+                <span>Characters: <span className="text-[var(--foreground)] opacity-70">{analysis?.charCount || 0}</span></span>
+                <span>Words: <span className="text-[var(--foreground)] opacity-70">{analysis?.wordCount || 0}</span></span>
+                <span>Reading Time: <span className="text-[var(--foreground)] opacity-70">{Math.ceil(analysis?.readingTime || 0)} min</span></span>
+            </div>
+            <div className="flex items-center gap-4">
+                {persistedTokens > 0 && (
+                    <span className="text-[10px] uppercase tracking-wider font-semibold opacity-50">
+                        Tokens: <span className="text-[var(--foreground)] opacity-70">{persistedTokens.toLocaleString()}</span>
+                    </span>
+                )}
+                <StatusIndicator />
+            </div>
+        </footer>
+    );
+});
 
 function StatusIndicator() {
     const [status, setStatus] = useState<'offline' | 'online'>('offline');

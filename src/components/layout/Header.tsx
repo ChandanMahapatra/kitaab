@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { FORMAT_TEXT_COMMAND, TextFormatType, $getSelection, $isRangeSelection, $createParagraphNode } from "lexical";
@@ -24,7 +24,7 @@ interface HeaderProps {
 
 type Theme = 'light' | 'dark' | 'sepia' | 'grey';
 
-export function Header({ title = "Untitled", setTitle }: HeaderProps) {
+export const Header = memo(function Header({ title = "Untitled", setTitle }: HeaderProps) {
     const [editor] = useLexicalComposerContext();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [theme, setTheme] = useState<Theme>('light');
@@ -308,4 +308,4 @@ export function Header({ title = "Untitled", setTitle }: HeaderProps) {
             <SettingsModal open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
         </>
     );
-}
+});

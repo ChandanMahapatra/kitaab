@@ -2,10 +2,10 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect, useRef } from "react";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { analyzeText, AnalysisResult } from "@/lib/analysis";
+import { getCachedMarkdown } from "@/lib/markdownCache";
 
-const DEBOUNCE_DELAY = 1000; // Slower debounce for analysis to avoid blocking main thread
+const DEBOUNCE_DELAY = 1000;
 
 interface AnalysisPluginProps {
     onAnalysisUpdate: (result: AnalysisResult) => void;
@@ -16,8 +16,7 @@ export function AnalysisPlugin({ onAnalysisUpdate }: AnalysisPluginProps) {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        return editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
-            // Don't update if nothing changed
+        return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
             if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
 
             if (timeoutRef.current) {
@@ -25,12 +24,9 @@ export function AnalysisPlugin({ onAnalysisUpdate }: AnalysisPluginProps) {
             }
 
             timeoutRef.current = setTimeout(() => {
-                editorState.read(() => {
-                    const markdown = $convertToMarkdownString(TRANSFORMERS);
-                    // Run analysis (synchronous for now, could be Web Worker later)
-                    const result = analyzeText(markdown);
-                    onAnalysisUpdate(result);
-                });
+                const { markdown } = getCachedMarkdown();
+                const result = analyzeText(markdown);
+                onAnalysisUpdate(result);
             }, DEBOUNCE_DELAY);
         });
     }, [editor, onAnalysisUpdate]);

@@ -54,11 +54,12 @@ export function DebouncedAutoSavePlugin() {
         let timeoutId: NodeJS.Timeout;
 
         return editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
-            // Don't update if no content changed
             if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
 
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
+                // Read directly from editorState to ensure we save the exact state
+                // at the time the debounced timeout fires, not a potentially stale cache
                 editorState.read(() => {
                     const markdown = $convertToMarkdownString(TRANSFORMERS);
                     const now = new Date();
@@ -69,8 +70,6 @@ export function DebouncedAutoSavePlugin() {
                         plainText: markdown,
                         createdAt: now,
                         updatedAt: now,
-                    }).then(() => {
-                        console.log("Auto-saved to IndexedDB");
                     }).catch(err => console.error("Auto-save failed", err));
                 });
             }, DEBOUNCE_DELAY);

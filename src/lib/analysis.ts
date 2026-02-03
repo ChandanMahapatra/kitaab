@@ -22,6 +22,16 @@ export const COMPLEX_WORD_SYLLABLES = 4;
 export const SENTENCE_REGEX = /[^.!?]+[.!?]+/g;
 export const WORD_REGEX = /\b\w+\b/g;
 
+const QUALIFIER_REGEX = new RegExp(
+    `\\b(${[
+        'I think', 'we think', 'I believe', 'we believe',
+        'maybe', 'perhaps', 'possibly', 'probably',
+        'I guess', 'we guess', 'kind of', 'sort of',
+        'a bit', 'a little', 'really', 'extremely', 'incredibly'
+    ].join('|')})\\b`,
+    'gi'
+);
+
 export interface SentenceMatch {
     text: string;
     wordCount: number;
@@ -46,15 +56,51 @@ export function isComplexWord(word: string): boolean {
     return syllableCount(word) >= COMPLEX_WORD_SYLLABLES;
 }
 
+/**
+ * LRU cache for syllable counts to avoid redundant computation.
+ * Using Map maintains insertion order, which we leverage for LRU eviction.
+ */
+const syllableCache = new Map<string, number>();
+const MAX_SYLLABLE_CACHE = 5000;
+
 export function syllableCount(word: string): number {
-    word = word.toLowerCase().replace(/[^a-z]/g, '');
-    if (word.length <= 3) return 1;
+    const cached = syllableCache.get(word);
+    if (cached !== undefined) {
+        // LRU: Move to end (most recently used)
+        syllableCache.delete(word);
+        syllableCache.set(word, cached);
+        return cached;
+    }
 
-    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-    word = word.replace(/^y/, '');
+    let w = word.toLowerCase().replace(/[^a-z]/g, '');
+    if (w.length <= 3) {
+        addToSyllableCache(word, 1);
+        return 1;
+    }
 
-    const syllables = word.match(/[aeiouy]{1,2}/g);
-    return syllables ? syllables.length : 1;
+    w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    w = w.replace(/^y/, '');
+
+    const syllables = w.match(/[aeiouy]{1,2}/g);
+    const count = syllables ? syllables.length : 1;
+
+    addToSyllableCache(word, count);
+    return count;
+}
+
+/**
+ * Add entry to syllable cache with LRU eviction.
+ * When cache is full, removes the least recently used entry (first in Map).
+ */
+function addToSyllableCache(word: string, count: number): void {
+    if (syllableCache.size >= MAX_SYLLABLE_CACHE) {
+        // Evict least recently used (first entry in Map)
+        const firstKey = syllableCache.keys().next().value;
+        if (firstKey !== undefined) {
+            syllableCache.delete(firstKey);
+        }
+    }
+    syllableCache.set(word, count);
 }
 
 export function analyzeText(text: string): AnalysisResult {
@@ -85,8 +131,9 @@ export function analyzeText(text: string): AnalysisResult {
 
     const readingTime = wordCount / 250;
 
-    // Syllables
-    const totalSyllables = words.reduce((acc, word) => acc + syllableCount(word), 0);
+    // Syllables (compute once, reuse for Flesch and score)
+    const syllableCounts = words.map(w => syllableCount(w));
+    const totalSyllables = syllableCounts.reduce((a, b) => a + b, 0);
 
     // Flesch Reading Ease
     // 206.835 - 1.015 * (words/sentences) - 84.6 * (syllables/words)
@@ -190,35 +237,36 @@ export function analyzeText(text: string): AnalysisResult {
         }
     }
 
-    // 5. Weak Qualifiers
-    const qualifierPhrases = [
-        'I think', 'we think', 'I believe', 'we believe',
-        'maybe', 'perhaps', 'possibly', 'probably',
-        'I guess', 'we guess', 'kind of', 'sort of',
-        'a bit', 'a little', 'really', 'extremely', 'incredibly'
-    ];
-
-    qualifierPhrases.forEach(phrase => {
-        const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
-        while ((match = regex.exec(text)) !== null) {
-            issues.push({
-                type: 'qualifier',
-                index: match.index,
-                length: match[0].length,
-                text: match[0],
-                suggestion: 'Remove weak qualifier'
-            });
-        }
-    });
+    // 5. Weak Qualifiers (single pre-compiled regex pass)
+    QUALIFIER_REGEX.lastIndex = 0;
+    while ((match = QUALIFIER_REGEX.exec(text)) !== null) {
+        issues.push({
+            type: 'qualifier',
+            index: match.index,
+            length: match[0].length,
+            text: match[0],
+            suggestion: 'Remove weak qualifier'
+        });
+    }
 
 
-    // Score Calculation
-    const adverbCount = issues.filter(i => i.type === 'adverb').length;
-    const passiveCount = issues.filter(i => i.type === 'passive').length;
-    const complexCount = issues.filter(i => i.type === 'complex').length;
-    const veryComplexCount = issues.filter(i => i.type === 'veryComplex').length;
-    const hardWordsCount = words.filter(w => syllableCount(w) >= 3).length; // 3+ syllables
-    const veryHardWordsCount = words.filter(w => syllableCount(w) >= COMPLEX_WORD_SYLLABLES).length; // 4+ syllables
+    // Score Calculation (single-pass counting)
+    const issueCounts: Record<string, number> = {};
+    for (const issue of issues) {
+        issueCounts[issue.type] = (issueCounts[issue.type] || 0) + 1;
+    }
+    const adverbCount = issueCounts['adverb'] || 0;
+    const passiveCount = issueCounts['passive'] || 0;
+    const complexCount = issueCounts['complex'] || 0;
+    const veryComplexCount = issueCounts['veryComplex'] || 0;
+
+    // Reuse pre-computed syllable counts from above
+    let hardWordsCount = 0;  // 3+ syllables
+    let veryHardWordsCount = 0;  // 4+ syllables
+    for (const count of syllableCounts) {
+        if (count >= 3) hardWordsCount++;
+        if (count >= COMPLEX_WORD_SYLLABLES) veryHardWordsCount++;
+    }
 
     const penalty_adverbs = Math.max(0, adverbCount - 2) * 2;
     const penalty_passive = Math.max(0, passiveCount - 4) * 2;
