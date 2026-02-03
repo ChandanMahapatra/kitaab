@@ -18,9 +18,6 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Kitaab",
   description: "Privacy-first, local-first markdown editor with real-time writing analysis",
-  icons: {
-    icon: "/favicon.svg",
-  },
 };
 
 export default function RootLayout({
