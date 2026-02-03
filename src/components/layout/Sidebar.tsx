@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
@@ -14,7 +14,7 @@ interface SidebarProps {
     onTokensUpdate?: (tokens: number, cost: number) => void;
 }
 
-export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onTokensUpdate }: SidebarProps) {
+export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onTokensUpdate }: SidebarProps) {
     const [editor] = useLexicalComposerContext();
     const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
     const [isEvaluating, setIsEvaluating] = useState(false);
@@ -403,4 +403,4 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
             </div>
         </aside>
     );
-}
+});

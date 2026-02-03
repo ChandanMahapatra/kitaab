@@ -3,11 +3,11 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect, useRef } from "react";
 import { $getRoot, $createTextNode, $isTextNode, TextNode, LexicalNode } from "lexical";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { $createIssueNode, IssueNode, $isIssueNode } from "@/components/editor/nodes/IssueNode";
 import { AnalysisResult, Issue } from "@/lib/analysis";
+import { getCachedMarkdown } from "@/lib/markdownCache";
 
-const DEBOUNCE_DELAY = 500;
+const DEBOUNCE_DELAY = 500; // Debounce DOM updates to avoid frequent re-highlighting
 
 interface SentenceHighlighterPluginProps {
     analysis: AnalysisResult | null;
@@ -16,6 +16,7 @@ interface SentenceHighlighterPluginProps {
 export function SentenceHighlighterPlugin({ analysis }: SentenceHighlighterPluginProps) {
     const [editor] = useLexicalComposerContext();
     const lastAnalysisRef = useRef<AnalysisResult | null>(null);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (!analysis || !editor.hasNodes([IssueNode])) {
@@ -45,31 +46,30 @@ export function SentenceHighlighterPlugin({ analysis }: SentenceHighlighterPlugi
 
         lastAnalysisRef.current = analysis;
 
-        const timeoutId = setTimeout(() => {
+        // Debounce the DOM update to avoid frequent re-highlighting
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
             editor.update(() => {
-                // Get the markdown representation to match positions
-                const markdown = $convertToMarkdownString(TRANSFORMERS);
-                
-                // Process sentence-level issues
-                const sentenceIssues = analysis.issues.filter(
-                    issue => issue.type === 'complex' || issue.type === 'veryComplex'
-                );
+                const { markdown } = getCachedMarkdown();
 
                 if (sentenceIssues.length === 0) {
-                    // Remove all existing sentence issue nodes if no issues found
                     removeAllSentenceIssueNodes(editor);
                     return;
                 }
 
-                // First, clean up old sentence issue nodes
                 removeAllSentenceIssueNodes(editor);
-
-                // Then apply new highlights
                 applySentenceHighlights(sentenceIssues, markdown);
             });
         }, DEBOUNCE_DELAY);
 
-        return () => clearTimeout(timeoutId);
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
     }, [analysis, editor]);
 
     return null;

@@ -19,12 +19,20 @@ function findMatchIndex(text: string, regex: RegExp): { start: number, end: numb
     return null;
 }
 
+/**
+ * Find the first complex word (4+ syllables) in the text.
+ *
+ * Performance optimization: Skip words shorter than 7 characters before syllable counting,
+ * as words with 4+ syllables are almost always 7+ characters long. This reduces expensive
+ * syllable counting calls on short words.
+ */
 function findHardWordMatch(text: string): { start: number, end: number, match: string } | null {
     WORD_REGEX.lastIndex = 0;
     let wordMatch;
     while ((wordMatch = WORD_REGEX.exec(text)) !== null) {
         const word = wordMatch[0];
-        if (isComplexWord(word)) {
+        // Skip short words - 4+ syllable words are typically 7+ chars
+        if (word.length >= 7 && isComplexWord(word)) {
             return { start: wordMatch.index, end: wordMatch.index + word.length, match: word };
         }
     }
@@ -41,77 +49,75 @@ export function IssueHighlighterPlugin() {
             throw new Error("IssueHighlighterPlugin: IssueNode not registered on editor");
         }
 
+        /**
+         * Register a node transform that highlights writing issues in the editor.
+         *
+         * IMPORTANT: This transform processes ONE match per text node, then relies on
+         * Lexical's automatic transform re-firing for split text nodes. When we split
+         * a text node (e.g., "word quickly here" → ["word ", "quickly", " here"]),
+         * Lexical automatically calls this transform again for the newly created text
+         * nodes, allowing us to process subsequent matches iteratively.
+         *
+         * This approach is more efficient than the previous while-loop implementation
+         * because it lets Lexical manage the iteration and ensures proper node cleanup.
+         */
         return editor.registerNodeTransform(TextNode, (textNode) => {
             if ($isIssueNode(textNode)) return;
 
-            let currentNode: TextNode | null = textNode;
+            const text = textNode.getTextContent();
 
-            while (currentNode) {
-                if ($isIssueNode(currentNode)) break;
+            const matches: Array<{ start: number; end: number; match: string; type: string }> = [];
 
-                const text = currentNode.getTextContent();
+            const adverbMatch = findMatchIndex(text, ADVERB_REGEX);
+            if (adverbMatch) matches.push({ ...adverbMatch, type: 'adverb' });
 
-                const matches: Array<{ start: number; end: number; match: string; type: string }> = [];
+            const passiveMatch = findMatchIndex(text, PASSIVE_REGEX);
+            if (passiveMatch) matches.push({ ...passiveMatch, type: 'passive' });
 
-                const adverbMatch = findMatchIndex(text, ADVERB_REGEX);
-                if (adverbMatch) matches.push({ ...adverbMatch, type: 'adverb' });
+            const qualifierMatch = findMatchIndex(text, QUALIFIER_REGEX);
+            if (qualifierMatch) matches.push({ ...qualifierMatch, type: 'qualifier' });
 
-                const passiveMatch = findMatchIndex(text, PASSIVE_REGEX);
-                if (passiveMatch) matches.push({ ...passiveMatch, type: 'passive' });
+            const hardWordMatch = findHardWordMatch(text);
+            if (hardWordMatch) matches.push({ ...hardWordMatch, type: 'hardWord' });
 
-                const qualifierMatch = findMatchIndex(text, QUALIFIER_REGEX);
-                if (qualifierMatch) matches.push({ ...qualifierMatch, type: 'qualifier' });
+            if (matches.length === 0) return;
 
-                const hardWordMatch = findHardWordMatch(text);
-                if (hardWordMatch) matches.push({ ...hardWordMatch, type: 'hardWord' });
-
-                if (matches.length === 0) break;
-
-                // Sort all matches by start position
-                // When matches overlap (same start), prefer word-level (shorter) over sentence-level (longer)
-                const bestMatch = matches.reduce((best, current) => {
-                    if (current.start < best.start) return current;
-                    if (current.start === best.start) {
-                        const bestLen = best.end - best.start;
-                        const currentLen = current.end - current.start;
-                        return currentLen < bestLen ? current : best;
-                    }
-                    return best;
-                });
-
-                const { start, end, match: matchText, type } = bestMatch;
-
-                if (type === 'adverb') {
-                    const word = matchText.toLowerCase();
-                    const exceptions = ['family', 'only', 'july', 'reply', 'supply', 'apply', 'belly', 'jelly', 'rally', 'ally'];
-                    if (exceptions.includes(word)) {
-                        const split: TextNode[] = start === 0
-                            ? currentNode.splitText(end)
-                            : currentNode.splitText(start, end);
-                        currentNode = split[split.length - 1] ?? null;
-                        continue;
-                    }
+            // Pick earliest match; on tie, prefer shorter (word-level over phrase-level)
+            const bestMatch = matches.reduce((best, current) => {
+                if (current.start < best.start) return current;
+                if (current.start === best.start) {
+                    const bestLen = best.end - best.start;
+                    const currentLen = current.end - current.start;
+                    return currentLen < bestLen ? current : best;
                 }
+                return best;
+            });
 
-                let targetNode: TextNode;
-                let afterNode: TextNode | undefined;
+            const { start, end, match: matchText, type } = bestMatch;
 
-                if (start === 0) {
-                    const split = currentNode.splitText(end);
-                    targetNode = split[0];
-                    afterNode = split[1];
-                } else {
-                    const split = currentNode.splitText(start, end);
-                    targetNode = split[1];
-                    afterNode = split[2];
-                }
-
-                const issueNode = $createIssueNode(matchText, type);
-                issueNode.setFormat(targetNode.getFormat());
-                targetNode.replace(issueNode);
-
-                currentNode = afterNode ?? null;
+            if (type === 'adverb') {
+                const word = matchText.toLowerCase();
+                const exceptions = ['family', 'only', 'july', 'reply', 'supply', 'apply', 'belly', 'jelly', 'rally', 'ally'];
+                if (exceptions.includes(word)) return;
             }
+
+            let targetNode: TextNode;
+
+            if (start === 0) {
+                const split = textNode.splitText(end);
+                targetNode = split[0];
+            } else {
+                const split = textNode.splitText(start, end);
+                targetNode = split[1];
+            }
+
+            const issueNode = $createIssueNode(matchText, type);
+            issueNode.setFormat(targetNode.getFormat());
+            targetNode.replace(issueNode);
+
+            // After splitting and replacing, Lexical will automatically re-fire this
+            // transform for the remaining text nodes (split[2] if start > 0, or split[1]
+            // if start === 0), allowing us to process the next match in those nodes.
         });
 
     }, [editor]);
