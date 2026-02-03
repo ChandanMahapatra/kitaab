@@ -66,7 +66,7 @@ export function analyzeText(text: string): AnalysisResult {
             paragraphCount: 0,
             readingTime: 0,
             fleschScore: 0,
-            score: 100,
+            score: 0,
             gradeLevel: 0,
             issues: [],
         };
