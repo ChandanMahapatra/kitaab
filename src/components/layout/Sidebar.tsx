@@ -24,7 +24,7 @@ export function Sidebar({ analysis, onHoverIssue, onHoverHighlightChange, onToke
     const [aiConfigured, setAiConfigured] = useState(false);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
 
-    const score = analysis?.score ?? 100;
+    const score = analysis?.score ?? 0;
     const gradeLevel = analysis?.gradeLevel ?? 0;
     const fleschScore = analysis?.fleschScore ?? 0;
 
