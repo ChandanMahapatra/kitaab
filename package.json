@@ -1,6 +1,12 @@
 {
-  "name": "temp-init",
+  "name": "kitaab",
   "version": "0.1.0",
+  "description": "Privacy-first markdown editor with real-time writing analysis",
+  "homepage": "https://chandanmahapatra.github.io/kitaab/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChandanMahapatra/kitaab"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
