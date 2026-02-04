@@ -9,7 +9,7 @@ import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode, REMOVE_LIST_COMMAND } from "@lexical/list";
-import { OPEN_LINK_EDITOR_COMMAND } from "@/components/editor/plugins/FloatingLinkEditorPlugin";
+import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $setBlocksType } from "@lexical/selection";
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
 import { $createCodeNode } from "@lexical/code";
@@ -20,11 +20,12 @@ import { cn } from "@/lib/utils";
 interface HeaderProps {
     title?: string;
     setTitle?: (title: string) => void;
+    setIsLinkEditMode?: (isEdit: boolean) => void;
 }
 
 type Theme = 'light' | 'dark' | 'sepia' | 'grey';
 
-export const Header = memo(function Header({ title = "Untitled", setTitle }: HeaderProps) {
+export const Header = memo(function Header({ title = "Untitled", setTitle, setIsLinkEditMode }: HeaderProps) {
     const [editor] = useLexicalComposerContext();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [theme, setTheme] = useState<Theme>('light');
@@ -87,7 +88,8 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
     };
 
     const insertLink = () => {
-        editor.dispatchCommand(OPEN_LINK_EDITOR_COMMAND, undefined);
+        editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+        setIsLinkEditMode?.(true);
     };
 
     const insertQuote = () => {

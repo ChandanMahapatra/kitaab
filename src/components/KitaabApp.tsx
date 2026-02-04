@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -30,7 +30,6 @@ import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlig
 import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePlugin";
-import { LinkClickPlugin } from "@/components/editor/plugins/LinkClickPlugin";
 import { FloatingLinkEditorPlugin } from "@/components/editor/plugins/FloatingLinkEditorPlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
@@ -91,6 +90,8 @@ export default function KitaabApp() {
     const [persistedCost, setPersistedCost] = useState(0);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
     const [hoveredIssueType, setHoveredIssueType] = useState<string | null>(null);
+    const [isLinkEditMode, setIsLinkEditMode] = useState(false);
+    const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
 
     const handleHoverHighlightChange = useCallback(
         (type: string | null) => setHoveredIssueType(type),
@@ -159,11 +160,12 @@ export default function KitaabApp() {
                 <Header
                     title={docTitle}
                     setTitle={setDocTitle}
+                    setIsLinkEditMode={setIsLinkEditMode}
                 />
 
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative transition-colors duration-300">
-                        <div className="flex-1 overflow-y-auto relative scrollbar-thin">
+                        <div ref={setScrollContainer} className="flex-1 overflow-y-auto relative scrollbar-thin">
                             <RichTextPlugin
                                 contentEditable={
                                     <ContentEditable
@@ -199,8 +201,13 @@ export default function KitaabApp() {
                                     }
                                 ]}
                             />
-                            <LinkClickPlugin />
-                            <FloatingLinkEditorPlugin />
+                            {scrollContainer && (
+                                <FloatingLinkEditorPlugin
+                                    anchorElem={scrollContainer}
+                                    isLinkEditMode={isLinkEditMode}
+                                    setIsLinkEditMode={setIsLinkEditMode}
+                                />
+                            )}
                             <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
                             <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />
