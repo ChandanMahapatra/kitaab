@@ -1,0 +1,98 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (preview)
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_BASE_PATH: /kitaab/preview/pr-${{ github.event.pull_request.number }}
+        run: |
+          npm run clean:out || true
+          npm run build
+
+      - name: Copy index.html -> 404.html for SPA refresh
+        run: |
+          if [ -f out/index.html ]; then cp out/index.html out/404.html; fi
+
+      - name: Run CI sanity checks
+        env:
+          PREVIEW_BASE_PATH: /kitaab/preview/pr-${{ github.event.pull_request.number }}
+        run: bash scripts/ci-sanity-check.sh
+
+      - name: Deploy preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          destination_dir: preview/pr-${{ github.event.pull_request.number }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const previewUrl = `https://chandanmahapatra.github.io/kitaab/preview/pr-${prNumber}/`;
+            const marker = '<!-- preview-comment -->';
+            const body = [
+              marker,
+              `## 🚀 Preview Deployment`,
+              '',
+              `Preview is live at: **${previewUrl}**`,
+              '',
+              `Built from commit: \`${context.sha.substring(0, 7)}\``,
+              '',
+              '_This preview will be automatically cleaned up when the PR is closed._',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
