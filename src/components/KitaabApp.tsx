@@ -32,6 +32,7 @@ import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePl
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
+import { isLocalProvider } from "@/lib/ai";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
 import { LexicalNode } from "lexical";
 
@@ -237,7 +238,7 @@ function StatusIndicator() {
             try {
                 const settings = await loadSettings();
                 if (!isMounted) return;
-                setStatus(settings?.apiKey ? 'online' : 'offline');
+                setStatus((settings?.provider && (isLocalProvider(settings.provider) || settings?.apiKey)) ? 'online' : 'offline');
             } catch (e) {
                 if (!isMounted) return;
                 setStatus('offline');

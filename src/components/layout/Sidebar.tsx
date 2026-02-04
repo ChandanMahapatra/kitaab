@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, memo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
-import { evaluateText, EvaluationResult, providers } from "@/lib/ai";
+import { evaluateText, EvaluationResult, providers, isLocalProvider } from "@/lib/ai";
 import { loadSettings, saveSettings } from "@/lib/storage";
 import { Zap, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,14 +31,14 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
     // Re-check AI config periodically (e.g., when settings modal closes)
     const checkAiConfig = async () => {
         const settings = await loadSettings();
-        setAiConfigured(!!(settings?.provider && settings?.apiKey));
+        setAiConfigured(!!(settings?.provider && (isLocalProvider(settings.provider) || settings?.apiKey)));
     };
 
     useEffect(() => {
         const loadSettingsData = async () => {
             const settings = await loadSettings();
             setHoverHighlightEnabled(settings?.hoverHighlightEnabled ?? false);
-            setAiConfigured(!!(settings?.provider && settings?.apiKey));
+            setAiConfigured(!!(settings?.provider && (isLocalProvider(settings.provider) || settings?.apiKey)));
             setShowCostEstimate(settings?.showCostEstimate ?? true);
         };
         loadSettingsData();
