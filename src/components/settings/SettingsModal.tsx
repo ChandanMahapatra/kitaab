@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Settings, Check, AlertTriangle, Loader2, Trash2 } from "lucide-react";
-import { providers, testConnection } from "@/lib/ai";
+import { providers, testConnection, isLocalProvider, fetchLocalModels } from "@/lib/ai";
 import { loadSettings, saveSettings } from "@/lib/storage";
 
 interface SettingsModalProps {
@@ -22,6 +22,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     const [tokensUsed, setTokensUsed] = React.useState(0);
     const [totalCost, setTotalCost] = React.useState(0);
     const [showCostEstimate, setShowCostEstimate] = React.useState(false);
+    const [discoveredModels, setDiscoveredModels] = React.useState<string[]>([]);
+    const [isFetchingModels, setIsFetchingModels] = React.useState(false);
 
     React.useEffect(() => {
         if (open) {
@@ -66,7 +68,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             setTimeout(() => onOpenChange(false), 1000);
         } else {
             setStatus('error');
-            setMessage("Connection failed. Check your API key is valid and active.");
+            setMessage(isLocalProvider(provider)
+                ? "Connection failed. Ensure the local service is running and CORS is enabled."
+                : "Connection failed. Check your API key is valid and active.");
         }
     };
 
@@ -93,6 +97,37 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         window.dispatchEvent(new Event('kitaab-settings-changed'));
     };
 
+    const handleProviderChange = (newProvider: string) => {
+        setProvider(newProvider);
+        setModel('');
+        setBaseURL('');
+        setDiscoveredModels([]);
+        setStatus('idle');
+        setMessage('');
+    };
+
+    const handleFetchModels = async () => {
+        if (!selectedProvider || !isLocalProvider(provider)) return;
+        setIsFetchingModels(true);
+        setMessage('');
+        try {
+            const effectiveBaseURL = baseURL || selectedProvider.baseURL;
+            const models = await fetchLocalModels(provider, effectiveBaseURL);
+            setDiscoveredModels(models);
+            if (models.length > 0 && !model) {
+                setModel(models[0]);
+            }
+            if (models.length === 0) {
+                setMessage('No models found. Ensure the service is running and has models loaded.');
+            }
+        } catch (e) {
+            setStatus('error');
+            setMessage(e instanceof Error ? e.message : 'Failed to fetch models');
+        } finally {
+            setIsFetchingModels(false);
+        }
+    };
+
     const selectedProvider = providers.find(p => p.id === provider);
 
     const buttonClass = "px-4 py-1.5 text-xs font-semibold border border-[var(--border-color)] text-[var(--foreground)] bg-transparent hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] hover:text-white rounded transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none";
@@ -117,7 +152,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             <select
                                 className="flex h-9 w-full rounded-md border border-[var(--border-color)] bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
                                 value={provider}
-                                onChange={(e) => setProvider(e.target.value)}
+                                onChange={(e) => handleProviderChange(e.target.value)}
                             >
                                 <option value="">None (Disable AI)</option>
                                 {providers.map(p => (
@@ -126,7 +161,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             </select>
                         </fieldset>
 
-                        {provider && (
+                        {provider && selectedProvider?.apiKeyRequired && (
                             <fieldset className="flex flex-col gap-2">
                                 <label className="text-sm font-semibold opacity-80">API Key</label>
                                 <input
@@ -142,22 +177,42 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         {provider && (
                             <fieldset className="flex flex-col gap-2">
                                 <label className="text-sm font-semibold opacity-80">Model</label>
-                                <input
-                                    className="flex h-9 w-full rounded-md border border-[var(--border-color)] bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
-                                    type="text"
-                                    placeholder={selectedProvider?.models[0] || "Model ID"}
-                                    value={model}
-                                    onChange={(e) => setModel(e.target.value)}
-                                    list="model-suggestions"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        className="flex h-9 w-full rounded-md border border-[var(--border-color)] bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                                        type="text"
+                                        placeholder={selectedProvider?.models[0] || "Model ID"}
+                                        value={model}
+                                        onChange={(e) => setModel(e.target.value)}
+                                        list="model-suggestions"
+                                    />
+                                    {isLocalProvider(provider) && (
+                                        <button
+                                            onClick={handleFetchModels}
+                                            disabled={isFetchingModels}
+                                            className={buttonClass}
+                                            type="button"
+                                            title="Fetch available models from local service"
+                                            style={{ width: 'auto', whiteSpace: 'nowrap' }}
+                                        >
+                                            {isFetchingModels ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Fetch'}
+                                        </button>
+                                    )}
+                                </div>
                                 <datalist id="model-suggestions">
-                                    {selectedProvider?.models.map(m => (
+                                    {(discoveredModels.length > 0 ? discoveredModels : selectedProvider?.models || []).map(m => (
                                         <option key={m} value={m} />
                                     ))}
                                 </datalist>
-                                <p className="text-[10px] opacity-50">
-                                    Recommended: {selectedProvider?.models.join(", ")}
-                                </p>
+                                {isLocalProvider(provider) ? (
+                                    <p className="text-[10px] opacity-50">
+                                        Click &quot;Fetch&quot; to discover available models, or type a model name.
+                                    </p>
+                                ) : (
+                                    <p className="text-[10px] opacity-50">
+                                        Recommended: {selectedProvider?.models.join(", ")}
+                                    </p>
+                                )}
                             </fieldset>
                         )}
 
@@ -174,7 +229,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                             </fieldset>
                         )}
 
-                        {provider && (
+                        {provider && isLocalProvider(provider) && (
+                            <div className="text-[10px] opacity-60 p-2 border border-[var(--border-color)] rounded">
+                                {provider === 'ollama' ? (
+                                    <>
+                                        <p className="font-semibold mb-1">Ollama Setup:</p>
+                                        <p>Start Ollama with CORS enabled:</p>
+                                        <code className="block mt-1 text-[9px] opacity-80 font-mono">OLLAMA_ORIGINS=* ollama serve</code>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="font-semibold mb-1">LM Studio Setup:</p>
+                                        <p>1. Open LM Studio and start the local server</p>
+                                        <p>2. Enable CORS in Settings &gt; Server</p>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        {provider && !isLocalProvider(provider) && (
                             <fieldset className="flex items-center gap-3">
                                 <input
                                     id="showCostEstimate"

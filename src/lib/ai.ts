@@ -27,6 +27,20 @@ export const providers: Provider[] = [
         apiKeyRequired: true,
         baseURL: 'https://openrouter.ai/api/v1',
         models: ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-pro-1.5']
+    },
+    {
+        id: 'ollama',
+        name: 'Ollama (Local)',
+        apiKeyRequired: false,
+        baseURL: 'http://localhost:11434/v1',
+        models: ['llama3.2', 'mistral', 'gemma2', 'phi3']
+    },
+    {
+        id: 'lmstudio',
+        name: 'LM Studio (Local)',
+        apiKeyRequired: false,
+        baseURL: 'http://localhost:1234/v1',
+        models: []
     }
 ];
 
@@ -48,6 +62,46 @@ export interface TokenUsage {
 
 import { calculateCostWithPricing } from './pricing';
 import { loadPricingCache } from './storage';
+
+export function isLocalProvider(providerId: string): boolean {
+    return providerId === 'ollama' || providerId === 'lmstudio';
+}
+
+function getCorsErrorMessage(providerId: string, baseURL: string): string {
+    if (providerId === 'ollama') {
+        return `CORS error connecting to Ollama at ${baseURL}. Start Ollama with: OLLAMA_ORIGINS=* ollama serve`;
+    }
+    if (providerId === 'lmstudio') {
+        return `CORS error connecting to LM Studio at ${baseURL}. Enable CORS in LM Studio: Settings > Server > Enable CORS.`;
+    }
+    return `Connection failed. Check that the service is running at ${baseURL}.`;
+}
+
+export async function fetchLocalModels(providerId: string, baseURL: string): Promise<string[]> {
+    try {
+        if (providerId === 'ollama') {
+            const nativeBaseURL = baseURL.replace(/\/v1\/?$/, '');
+            const response = await fetch(`${nativeBaseURL}/api/tags`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return (data.models || []).map((m: { name: string }) => m.name);
+        }
+        if (providerId === 'lmstudio') {
+            // Ensure /v1 is in the path for LM Studio
+            const effectiveURL = baseURL.endsWith('/v1') || baseURL.endsWith('/v1/') ? baseURL : `${baseURL}/v1`;
+            const response = await fetch(`${effectiveURL}/models`);
+            if (!response.ok) return [];
+            const data = await response.json();
+            return (data.data || []).map((m: { id: string }) => m.id);
+        }
+    } catch (e) {
+        if (e instanceof TypeError && e.message.includes('fetch')) {
+            throw new Error(getCorsErrorMessage(providerId, baseURL));
+        }
+        console.warn('Failed to fetch local models:', e);
+    }
+    return [];
+}
 
 const MODEL_PRICING: Record<string, { inputPer1K: number; outputPer1K: number }> = {
     'gpt-4': { inputPer1K: 0.03, outputPer1K: 0.06 },
@@ -102,6 +156,15 @@ export async function testConnection(providerId: string, apiKey: string, baseURL
                 return false;
             }
             return response.ok;
+        } else if (providerId === 'ollama') {
+            const nativeBaseURL = effectiveBaseURL.replace(/\/v1\/?$/, '');
+            const response = await fetch(`${nativeBaseURL}/api/tags`);
+            return response.ok;
+        } else if (providerId === 'lmstudio') {
+            // Ensure /v1 is in the path for LM Studio
+            const normalizedURL = effectiveBaseURL.endsWith('/v1') || effectiveBaseURL.endsWith('/v1/') ? effectiveBaseURL : `${effectiveBaseURL}/v1`;
+            const response = await fetch(`${normalizedURL}/models`);
+            return response.ok;
         }
     } catch (e) {
         console.error("Connection test failed", e);
@@ -120,7 +183,12 @@ export async function evaluateText(
     const provider = providers.find(p => p.id === providerId);
     if (!provider) throw new Error("Provider not found");
 
-    const effectiveBaseURL = baseURL || provider.baseURL;
+    let effectiveBaseURL = baseURL || provider.baseURL;
+
+    // Ensure /v1 is in the path for LM Studio
+    if (providerId === 'lmstudio' && !(effectiveBaseURL.endsWith('/v1') || effectiveBaseURL.endsWith('/v1/'))) {
+        effectiveBaseURL = `${effectiveBaseURL}/v1`;
+    }
 
     const prompt = `Evaluate the following text for grammar, clarity, and overall writing quality. 
 Focus only on the prose content - ignore markdown syntax, formatting symbols (like #, *, -, [], (), etc.), and technical markup issues.
@@ -144,11 +212,13 @@ ${text}`;
     let outputTokens = 0;
 
     try {
-        if (providerId === 'openai' || providerId === 'openrouter') {
+        if (providerId === 'openai' || providerId === 'openrouter' || isLocalProvider(providerId)) {
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
             };
+            if (!isLocalProvider(providerId) && apiKey) {
+                headers['Authorization'] = `Bearer ${apiKey}`;
+            }
             if (providerId === 'openrouter') {
                 headers['HTTP-Referer'] = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
                 headers['X-Title'] = 'Kitaab Editor';
@@ -195,6 +265,9 @@ ${text}`;
             outputTokens = data.usage?.output_tokens || 0;
         }
     } catch (error) {
+        if (isLocalProvider(providerId) && error instanceof TypeError && error.message.includes('fetch')) {
+            throw new Error(getCorsErrorMessage(providerId, effectiveBaseURL));
+        }
         console.error("Evaluation failed", error);
         throw error;
     }
