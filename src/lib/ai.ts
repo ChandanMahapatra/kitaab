@@ -87,7 +87,9 @@ export async function fetchLocalModels(providerId: string, baseURL: string): Pro
             return (data.models || []).map((m: { name: string }) => m.name);
         }
         if (providerId === 'lmstudio') {
-            const response = await fetch(`${baseURL}/models`);
+            // Ensure /v1 is in the path for LM Studio
+            const effectiveURL = baseURL.endsWith('/v1') || baseURL.endsWith('/v1/') ? baseURL : `${baseURL}/v1`;
+            const response = await fetch(`${effectiveURL}/models`);
             if (!response.ok) return [];
             const data = await response.json();
             return (data.data || []).map((m: { id: string }) => m.id);
@@ -159,7 +161,9 @@ export async function testConnection(providerId: string, apiKey: string, baseURL
             const response = await fetch(`${nativeBaseURL}/api/tags`);
             return response.ok;
         } else if (providerId === 'lmstudio') {
-            const response = await fetch(`${effectiveBaseURL}/models`);
+            // Ensure /v1 is in the path for LM Studio
+            const normalizedURL = effectiveBaseURL.endsWith('/v1') || effectiveBaseURL.endsWith('/v1/') ? effectiveBaseURL : `${effectiveBaseURL}/v1`;
+            const response = await fetch(`${normalizedURL}/models`);
             return response.ok;
         }
     } catch (e) {
@@ -179,7 +183,12 @@ export async function evaluateText(
     const provider = providers.find(p => p.id === providerId);
     if (!provider) throw new Error("Provider not found");
 
-    const effectiveBaseURL = baseURL || provider.baseURL;
+    let effectiveBaseURL = baseURL || provider.baseURL;
+
+    // Ensure /v1 is in the path for LM Studio
+    if (providerId === 'lmstudio' && !(effectiveBaseURL.endsWith('/v1') || effectiveBaseURL.endsWith('/v1/'))) {
+        effectiveBaseURL = `${effectiveBaseURL}/v1`;
+    }
 
     const prompt = `Evaluate the following text for grammar, clarity, and overall writing quality. 
 Focus only on the prose content - ignore markdown syntax, formatting symbols (like #, *, -, [], (), etc.), and technical markup issues.
