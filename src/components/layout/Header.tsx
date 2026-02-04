@@ -2,19 +2,11 @@
 import { useState, useEffect, memo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
-import { FORMAT_TEXT_COMMAND, TextFormatType, $getSelection, $isRangeSelection, $createParagraphNode } from "lexical";
-import { Bold, Italic, List, Link as LinkIcon, Settings, Share, Palette, FileText, FileCode, FileType, Check, Strikethrough, Code, Code2, Heading, Quote, Minus, Copy } from "lucide-react";
+import { Settings, Share, Palette, FileText, FileCode, FileType, Check, Copy } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode, REMOVE_LIST_COMMAND } from "@lexical/list";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
-import { $setBlocksType } from "@lexical/selection";
-import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
-import { $createCodeNode } from "@lexical/code";
-import { INSERT_HORIZONTAL_RULE_COMMAND } from "@lexical/react/LexicalHorizontalRuleNode";
-import { $getNearestNodeOfType } from "@lexical/utils";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -42,7 +34,6 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
     useEffect(() => {
         const savedTheme = localStorage.getItem('kitaab-theme') as Theme || 'light';
         applyTheme(savedTheme);
-        // Use startTransition or schedule the state update after render
         const timeoutId = setTimeout(() => setTheme(savedTheme), 0);
         return () => clearTimeout(timeoutId);
     }, []);
@@ -51,72 +42,6 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
         setTheme(t);
         localStorage.setItem('kitaab-theme', t);
         applyTheme(t);
-    };
-
-    const formatText = (format: TextFormatType) => {
-        editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
-    };
-
-    const setHeading = (level: 1 | 2 | 3 | 4 | 5 | 6 | 'paragraph') => {
-        editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection)) return;
-            if (level === 'paragraph') {
-                $setBlocksType(selection, () => $createParagraphNode());
-                return;
-            }
-            $setBlocksType(selection, () => $createHeadingNode(`h${level}`));
-        });
-    };
-
-    const toggleList = (listType: 'bullet' | 'number') => {
-        editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection)) return;
-            const anchorNode = selection.anchor.getNode();
-            const listNode = $getNearestNodeOfType(anchorNode, ListNode);
-            if (listNode && listNode.getListType() === listType) {
-                editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
-                return;
-            }
-            editor.dispatchCommand(
-                listType === 'bullet' ? INSERT_UNORDERED_LIST_COMMAND : INSERT_ORDERED_LIST_COMMAND,
-                undefined
-            );
-        });
-    };
-
-    const insertLink = () => {
-        const url = prompt("Enter URL:", "https://");
-        if (url) {
-            editor.update(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection) && selection.isCollapsed()) {
-                    selection.insertText(url);
-                }
-            });
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-        }
-    };
-
-    const insertQuote = () => {
-        editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection)) return;
-            $setBlocksType(selection, () => $createQuoteNode());
-        });
-    };
-
-    const insertCodeBlock = () => {
-        editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection)) return;
-            $setBlocksType(selection, () => $createCodeNode());
-        });
-    };
-
-    const insertHorizontalRule = () => {
-        editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
     };
 
     const handleExport = (type: 'md' | 'html' | 'pdf') => {
@@ -136,91 +61,13 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
                 <div className="flex items-center gap-6">
                     <div className="size-8 bg-primary rounded flex items-center justify-center text-white font-bold text-lg cursor-default shadow-sm">K</div>
 
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle?.(e.target.value)}
-                            className="text-sm font-medium text-[var(--foreground)] bg-transparent border-none outline-none hover:opacity-70 transition-opacity w-48 placeholder-neutral-400"
-                            placeholder="Untitled draft"
-                        />
-
-                        <div className="flex items-center gap-1 h-6 pl-4 border-l border-[var(--border-color)]">
-                            <DropdownMenu.Root>
-                                <DropdownMenu.Trigger asChild>
-                                    <button type="button" className={buttonClass} aria-label="Heading options" title="Heading (# for H1, ## for H2, etc.)">
-                                        <Heading className="w-4 h-4" />
-                                    </button>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Portal>
-                                    <DropdownMenu.Content
-                                        className="min-w-[160px] bg-[var(--background)] border border-[var(--border-color)] rounded-md p-1 shadow-lg z-50 text-[var(--foreground)]"
-                                        sideOffset={5}
-                                    >
-                                        {(['paragraph', 1, 2, 3, 4, 5, 6] as const).map((level) => (
-                                            <DropdownMenu.Item
-                                                key={level}
-                                                onSelect={() => setHeading(level)}
-                                                className="group text-[13px] leading-none text-[var(--foreground)] rounded-[3px] flex items-center h-[35px] px-[8px] relative select-none outline-none data-[highlighted]:bg-primary data-[highlighted]:text-white cursor-pointer"
-                                            >
-                                                {level === 'paragraph' ? 'Paragraph' : `Heading ${level}`}
-                                            </DropdownMenu.Item>
-                                        ))}
-                                    </DropdownMenu.Content>
-                                </DropdownMenu.Portal>
-                            </DropdownMenu.Root>
-                            <button type="button" onClick={() => formatText("bold")} className={buttonClass} aria-label="Bold" title="Bold (**text**)">
-                                <Bold className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={() => formatText("italic")} className={buttonClass} aria-label="Italic" title="Italic (*text*)">
-                                <Italic className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={() => formatText("strikethrough")} className={buttonClass} aria-label="Strikethrough" title="Strikethrough (~~text~~)">
-                                <Strikethrough className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={() => formatText("code")} className={buttonClass} aria-label="Inline code" title="Inline code (`code`)">
-                                <Code className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={insertLink} className={buttonClass} aria-label="Link" title="Insert link">
-                                <LinkIcon className="w-4 h-4" />
-                            </button>
-                            <DropdownMenu.Root>
-                                <DropdownMenu.Trigger asChild>
-                                    <button type="button" className={buttonClass} aria-label="List options" title="List (- or 1. for lists)">
-                                        <List className="w-4 h-4" />
-                                    </button>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Portal>
-                                    <DropdownMenu.Content
-                                        className="min-w-[160px] bg-[var(--background)] border border-[var(--border-color)] rounded-md p-1 shadow-lg z-50 text-[var(--foreground)]"
-                                        sideOffset={5}
-                                    >
-                                        <DropdownMenu.Item
-                                            onSelect={() => toggleList('bullet')}
-                                            className="group text-[13px] leading-none text-[var(--foreground)] rounded-[3px] flex items-center h-[35px] px-[8px] relative select-none outline-none data-[highlighted]:bg-primary data-[highlighted]:text-white cursor-pointer"
-                                        >
-                                            Bullet list
-                                        </DropdownMenu.Item>
-                                        <DropdownMenu.Item
-                                            onSelect={() => toggleList('number')}
-                                            className="group text-[13px] leading-none text-[var(--foreground)] rounded-[3px] flex items-center h-[35px] px-[8px] relative select-none outline-none data-[highlighted]:bg-primary data-[highlighted]:text-white cursor-pointer"
-                                        >
-                                            Numbered list
-                                        </DropdownMenu.Item>
-                                    </DropdownMenu.Content>
-                                </DropdownMenu.Portal>
-                            </DropdownMenu.Root>
-                            <button type="button" onClick={insertQuote} className={buttonClass} aria-label="Blockquote" title="Blockquote (> text)">
-                                <Quote className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={insertCodeBlock} className={buttonClass} aria-label="Code block" title="Code block (```)">
-                                <Code2 className="w-4 h-4" />
-                            </button>
-                            <button type="button" onClick={insertHorizontalRule} className={buttonClass} aria-label="Horizontal rule" title="Horizontal rule (---)">
-                                <Minus className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle?.(e.target.value)}
+                        className="text-sm font-medium text-[var(--foreground)] bg-transparent border-none outline-none hover:opacity-70 transition-opacity w-48 placeholder-neutral-400"
+                        placeholder="Untitled draft"
+                    />
                 </div>
 
                 <div className="flex items-center gap-3">
