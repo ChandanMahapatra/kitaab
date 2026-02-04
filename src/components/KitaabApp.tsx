@@ -15,6 +15,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { HorizontalRuleNode, $createHorizontalRuleNode, $isHorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { AutoLinkPlugin } from "@lexical/react/LexicalAutoLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TRANSFORMERS, ElementTransformer } from "@lexical/markdown";
@@ -29,6 +30,8 @@ import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlig
 import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePlugin";
+import { LinkClickPlugin } from "@/components/editor/plugins/LinkClickPlugin";
+import { FloatingLinkEditorPlugin } from "@/components/editor/plugins/FloatingLinkEditorPlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
@@ -178,6 +181,26 @@ export default function KitaabApp() {
                             <AutoFocusPlugin />
                             <ListPlugin />
                             <LinkPlugin />
+                            <AutoLinkPlugin
+                                matchers={[
+                                    (text: string) => {
+                                        const URL_REGEX = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/i;
+                                        const match = URL_REGEX.exec(text);
+                                        if (match) {
+                                            const url = match[0];
+                                            return {
+                                                index: match.index,
+                                                length: url.length,
+                                                text: url,
+                                                url: url.startsWith('http') ? url : `https://${url}`,
+                                            };
+                                        }
+                                        return null;
+                                    }
+                                ]}
+                            />
+                            <LinkClickPlugin />
+                            <FloatingLinkEditorPlugin />
                             <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
                             <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />

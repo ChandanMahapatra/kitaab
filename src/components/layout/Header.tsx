@@ -9,7 +9,7 @@ import { SettingsModal } from "@/components/settings/SettingsModal";
 import { exportToMarkdown, exportToHTML, exportToPDF } from "@/lib/export";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode, REMOVE_LIST_COMMAND } from "@lexical/list";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { OPEN_LINK_EDITOR_COMMAND } from "@/components/editor/plugins/FloatingLinkEditorPlugin";
 import { $setBlocksType } from "@lexical/selection";
 import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
 import { $createCodeNode } from "@lexical/code";
@@ -87,16 +87,7 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
     };
 
     const insertLink = () => {
-        const url = prompt("Enter URL:", "https://");
-        if (url) {
-            editor.update(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection) && selection.isCollapsed()) {
-                    selection.insertText(url);
-                }
-            });
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-        }
+        editor.dispatchCommand(OPEN_LINK_EDITOR_COMMAND, undefined);
     };
 
     const insertQuote = () => {

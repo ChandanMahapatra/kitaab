@@ -1,9 +1,9 @@
 "use client";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { FORMAT_TEXT_COMMAND, TextFormatType, $getSelection, $isRangeSelection } from "lexical";
+import { FORMAT_TEXT_COMMAND, TextFormatType } from "lexical";
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { OPEN_LINK_EDITOR_COMMAND } from "@/components/editor/plugins/FloatingLinkEditorPlugin";
 import { Bold, Italic, Code, Link, List, ListOrdered } from "lucide-react";
 
 export function EditorToolbar() {
@@ -14,16 +14,7 @@ export function EditorToolbar() {
     };
 
     const insertLink = () => {
-        const url = prompt("Enter URL:", "https://");
-        if (url) {
-            editor.update(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection) && selection.isCollapsed()) {
-                    selection.insertText(url);
-                }
-            });
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
-        }
+        editor.dispatchCommand(OPEN_LINK_EDITOR_COMMAND, undefined);
     };
 
     const insertUnorderedList = () => {
