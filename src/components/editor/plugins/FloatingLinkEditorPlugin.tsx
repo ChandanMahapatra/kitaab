@@ -65,36 +65,61 @@ export function FloatingLinkEditorPlugin() {
         return editor.registerCommand(
             OPEN_LINK_EDITOR_COMMAND,
             () => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                    const selectedText = selection.getTextContent();
-                    setUrl('');
-                    setUrlError('');
-                    setLinkText(selectedText);
+                editor.update(() => {
+                    const selection = $getSelection();
+                    if ($isRangeSelection(selection)) {
+                        const selectedText = selection.getTextContent();
+                        setUrl('');
+                        setUrlError('');
+                        setLinkText(selectedText);
 
-                    // Get the selection's DOM range for positioning
-                    const nativeSelection = window.getSelection();
-                    if (nativeSelection && nativeSelection.rangeCount > 0) {
-                        const range = nativeSelection.getRangeAt(0);
-                        const rect = range.getBoundingClientRect();
+                        // Use setTimeout to ensure DOM is updated
+                        setTimeout(() => {
+                            const nativeSelection = window.getSelection();
+                            if (nativeSelection && nativeSelection.rangeCount > 0) {
+                                const range = nativeSelection.getRangeAt(0);
+                                let rect = range.getBoundingClientRect();
 
-                        // Clean up any previous temp anchor
-                        if (tempAnchorRef.current && document.body.contains(tempAnchorRef.current)) {
-                            document.body.removeChild(tempAnchorRef.current);
-                        }
+                                // If selection is collapsed (no text selected), get cursor position differently
+                                if (rect.width === 0 && rect.height === 0) {
+                                    // Create a temporary span at the cursor position
+                                    const tempSpan = document.createElement('span');
+                                    tempSpan.textContent = '\u200B'; // Zero-width space
+                                    range.insertNode(tempSpan);
+                                    rect = tempSpan.getBoundingClientRect();
+                                    tempSpan.remove();
+                                }
 
-                        // Create a temporary anchor element at the selection
-                        const tempAnchor = document.createElement('span');
-                        tempAnchor.style.position = 'absolute';
-                        tempAnchor.style.left = `${rect.left}px`;
-                        tempAnchor.style.top = `${rect.top}px`;
-                        document.body.appendChild(tempAnchor);
-                        tempAnchorRef.current = tempAnchor;
+                                // Clean up any previous temp anchor
+                                if (tempAnchorRef.current && document.body.contains(tempAnchorRef.current)) {
+                                    document.body.removeChild(tempAnchorRef.current);
+                                }
 
-                        setAnchorElement(tempAnchor);
-                        setIsOpen(true);
+                                // Create a temporary anchor element at the selection
+                                const tempAnchor = document.createElement('div');
+                                tempAnchor.style.position = 'fixed';
+                                tempAnchor.style.left = `${rect.left + window.scrollX}px`;
+                                tempAnchor.style.top = `${rect.top + window.scrollY}px`;
+                                tempAnchor.style.width = `${Math.max(rect.width, 1)}px`;
+                                tempAnchor.style.height = `${Math.max(rect.height, 20)}px`;
+                                tempAnchor.style.pointerEvents = 'none';
+                                document.body.appendChild(tempAnchor);
+                                tempAnchorRef.current = tempAnchor;
+
+                                setAnchorElement(tempAnchor);
+                                setIsOpen(true);
+
+                                // Focus input after a small delay to ensure popover is rendered
+                                setTimeout(() => {
+                                    if (inputRef.current) {
+                                        inputRef.current.focus();
+                                        inputRef.current.select();
+                                    }
+                                }, 50);
+                            }
+                        }, 0);
                     }
-                }
+                });
                 return true;
             },
             COMMAND_PRIORITY_LOW
@@ -106,14 +131,17 @@ export function FloatingLinkEditorPlugin() {
         return editor.registerCommand(
             SELECTION_CHANGE_COMMAND,
             () => {
-                editor.read(() => {
-                    updateLinkEditor();
-                });
+                // Don't auto-open popover on selection change if it's already open
+                if (!isOpen) {
+                    editor.read(() => {
+                        updateLinkEditor();
+                    });
+                }
                 return false;
             },
             COMMAND_PRIORITY_LOW
         );
-    }, [editor, updateLinkEditor]);
+    }, [editor, updateLinkEditor, isOpen]);
 
     // Handle save
     const handleSave = () => {
@@ -131,13 +159,17 @@ export function FloatingLinkEditorPlugin() {
         setUrlError('');
         const normalizedUrl = normalizeUrl(url);
 
-        editor.dispatchCommand(TOGGLE_LINK_COMMAND, normalizedUrl);
+        editor.update(() => {
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, normalizedUrl);
+        });
         setIsOpen(false);
     };
 
     // Handle remove
     const handleRemove = () => {
-        editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+        editor.update(() => {
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+        });
         setIsOpen(false);
     };
 
@@ -153,20 +185,21 @@ export function FloatingLinkEditorPlugin() {
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            e.stopPropagation();
             handleSave();
         } else if (e.key === 'Escape') {
             e.preventDefault();
+            e.stopPropagation();
             setIsOpen(false);
+            // Return focus to editor
+            editor.focus();
         }
     };
 
-    // Auto-focus input when opened
-    useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.select();
-        }
-    }, [isOpen]);
+    // Prevent clicks inside popover from closing it or affecting editor
+    const handlePopoverMouseDown = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    };
 
     return (
         <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -178,6 +211,7 @@ export function FloatingLinkEditorPlugin() {
                 >
                     <Popover.Popup
                         className="w-[360px] p-4 rounded-lg border border-[var(--border-color)] bg-[var(--background)] shadow-lg space-y-3 z-50"
+                        onMouseDown={handlePopoverMouseDown}
                     >
                         <Popover.Arrow className="fill-[var(--background)]" />
 
@@ -212,18 +246,21 @@ export function FloatingLinkEditorPlugin() {
                         <div className="flex gap-2 pt-2">
                             <button
                                 onClick={handleRemove}
+                                onMouseDown={(e) => e.preventDefault()}
                                 className="px-3 py-1.5 rounded text-sm border border-[var(--border-color)] hover:bg-[var(--sidebar-bg)] transition-colors"
                             >
                                 Remove
                             </button>
                             <button
                                 onClick={handleOpen}
+                                onMouseDown={(e) => e.preventDefault()}
                                 className="px-3 py-1.5 rounded text-sm border border-[var(--border-color)] hover:bg-[var(--sidebar-bg)] transition-colors"
                             >
                                 Open in New Tab
                             </button>
                             <button
                                 onClick={handleSave}
+                                onMouseDown={(e) => e.preventDefault()}
                                 className="ml-auto px-4 py-1.5 rounded text-sm text-white bg-primary hover:opacity-90 transition-opacity"
                             >
                                 Save Link
