@@ -76,7 +76,7 @@ function FloatingLinkEditor({
 
     useEffect(() => {
         isLinkEditModeRef.current = isLinkEditMode;
-    }, [isLinkEditMode]);
+    }, [isLinkEditMode, isLink]);
 
     const $updateLinkEditor = useCallback(() => {
         const selection = $getSelection();
@@ -191,10 +191,15 @@ function FloatingLinkEditor({
     }, [editor, $updateLinkEditor, isLink, setIsLink, setIsLinkEditMode]);
 
     useEffect(() => {
-        if (isLinkEditMode && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [isLinkEditMode, isLink]);
+        if (!isLinkEditMode) return;
+        const handle = requestAnimationFrame(() => {
+            const input = inputRef.current;
+            if (!input) return;
+            input.focus({ preventScroll: true });
+            input.select();
+        });
+        return () => cancelAnimationFrame(handle);
+    }, [isLinkEditMode]);
 
     const monitorInputInteraction = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Enter") {
@@ -243,6 +248,7 @@ function FloatingLinkEditor({
         <div
             ref={editorRef}
             className={`link-editor absolute top-0 left-0 z-50 max-w-[400px] w-full opacity-0 transition-opacity ${isLink ? "bg-[var(--background)] border border-[var(--border-color)] rounded-lg shadow-lg" : ""}`}
+            onPointerDown={(event) => event.stopPropagation()}
         >
             {!isLink ? null : isLinkEditMode ? (
                 <div className="flex items-center gap-1 p-2">
@@ -252,6 +258,7 @@ function FloatingLinkEditor({
                         value={editedLinkUrl}
                         onChange={(event) => setEditedLinkUrl(event.target.value)}
                         onKeyDown={monitorInputInteraction}
+                        onPointerDown={(event) => event.stopPropagation()}
                         placeholder="https://"
                     />
                     <button

@@ -12,37 +12,25 @@ export function sanitizeUrl(url: string): string {
         if (!SUPPORTED_URL_PROTOCOLS.has(parsedUrl.protocol)) {
             return "about:blank";
         }
-        return url;
     } catch {
-        // Malformed URL - use allowlist approach for relative URLs
-        const trimmedUrl = url.trim();
-        const lowercaseUrl = trimmedUrl.toLowerCase();
-
-        // Block any URL with a scheme-like pattern that isn't supported
-        if (lowercaseUrl.includes(":")) {
-            // Allow only specific relative schemes
-            if (lowercaseUrl.startsWith("#") || lowercaseUrl.startsWith("?")) {
-                return trimmedUrl;
-            }
-            return "about:blank";
-        }
-
-        // Allow relative paths (/, ./, ../)
-        if (lowercaseUrl.startsWith("/") || lowercaseUrl.startsWith("./") || lowercaseUrl.startsWith("../")) {
-            return trimmedUrl;
-        }
-
-        // For anything else that doesn't parse as a URL, reject it
-        return "about:blank";
+        // If URL parsing fails, return the original URL
+        // This allows relative URLs and placeholder URLs like "https://"
+        return url;
     }
+    return url;
 }
 
 export function validateUrl(url: string): boolean {
+    // Allow placeholder URL for link creation
+    if (url === "https://") {
+        return true;
+    }
     try {
         const parsedUrl = new URL(url);
         return SUPPORTED_URL_PROTOCOLS.has(parsedUrl.protocol);
     } catch {
-        return false;
+        // Allow relative URLs and other non-absolute URLs
+        return true;
     }
 }
 

@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSelectedNode } from "@/lib/editorUtils";
+import { sanitizeUrl } from "@/lib/linkUtils";
 
 // Font families organized by category
 const FONT_FAMILIES = [
@@ -281,24 +282,29 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
     // Link handler
     const insertLink = useCallback(() => {
         if (!isLink) {
-            editor.update(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                    if (selection.isCollapsed()) {
-                        // No text selected: create a link node with placeholder text
-                        const linkNode = $createLinkNode("https://");
-                        const textNode = $createTextNode("link");
-                        linkNode.append(textNode);
-                        selection.insertNodes([linkNode]);
-                        // Place cursor inside the link so floating editor detects it
-                        textNode.select(0, 4);
-                    } else {
-                        // Text is already selected, wrap it in a link
-                        editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
-                    }
-                }
+            const selection = editor.getEditorState().read(() => $getSelection());
+            const isCollapsed = $isRangeSelection(selection) && selection.isCollapsed();
+
+            if (isCollapsed) {
+                // For collapsed selection, insert placeholder text first
+                editor.update(() => {
+                    const selection = $getSelection();
+                    if (!$isRangeSelection(selection)) return;
+                    const linkNode = $createLinkNode(sanitizeUrl("https://"));
+                    const textNode = $createTextNode("link");
+                    linkNode.append(textNode);
+                    selection.insertNodes([linkNode]);
+                    textNode.select(0, 4); // Select "link" text
+                });
+            } else {
+                // For text selection, just toggle the link
+                editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl("https://"));
+            }
+
+            // Wait for next frame to ensure editor has updated and isLink is set
+            requestAnimationFrame(() => {
+                setIsLinkEditMode(true);
             });
-            setIsLinkEditMode(true);
         } else {
             setIsLinkEditMode(false);
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
