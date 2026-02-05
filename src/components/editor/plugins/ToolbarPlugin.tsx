@@ -7,6 +7,7 @@ import {
     $isRangeSelection,
     $isRootOrShadowRoot,
     $createParagraphNode,
+    $createTextNode,
     CAN_REDO_COMMAND,
     CAN_UNDO_COMMAND,
     COMMAND_PRIORITY_CRITICAL,
@@ -15,7 +16,7 @@ import {
     REDO_COMMAND,
     SELECTION_CHANGE_COMMAND,
 } from "lexical";
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { $isLinkNode, $createLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $isListNode, ListNode, INSERT_UNORDERED_LIST_COMMAND, INSERT_ORDERED_LIST_COMMAND, INSERT_CHECK_LIST_COMMAND } from "@lexical/list";
 import { $isHeadingNode, $createHeadingNode, $createQuoteNode, HeadingTagType, $isQuoteNode } from "@lexical/rich-text";
 import { $isCodeNode, $createCodeNode } from "@lexical/code";
@@ -284,17 +285,15 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 const selection = $getSelection();
                 if ($isRangeSelection(selection)) {
                     if (selection.isCollapsed()) {
-                        // If no text selected, insert placeholder text
-                        const textNode = selection.anchor.getNode();
-                        const offset = selection.anchor.offset;
-                        selection.insertText("link");
-                        // Select the text we just inserted
-                        const newSelection = textNode.select(offset, offset + 4);
-                        if ($isRangeSelection(newSelection)) {
-                            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
-                        }
+                        // No text selected: create a link node with placeholder text
+                        const linkNode = $createLinkNode("https://");
+                        const textNode = $createTextNode("link");
+                        linkNode.append(textNode);
+                        selection.insertNodes([linkNode]);
+                        // Place cursor inside the link so floating editor detects it
+                        textNode.select(0, 4);
                     } else {
-                        // Text is already selected, just apply link
+                        // Text is already selected, wrap it in a link
                         editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
                     }
                 }
@@ -493,6 +492,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
             <button
                 type="button"
                 disabled={!isEditable}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={insertLink}
                 className={cn(btnClass, isLink && btnActiveClass)}
                 aria-label="Insert link"
