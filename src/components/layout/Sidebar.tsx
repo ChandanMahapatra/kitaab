@@ -4,8 +4,9 @@ import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
 import { evaluateText, EvaluationResult, providers, isLocalProvider } from "@/lib/ai";
 import { loadSettings, saveSettings } from "@/lib/storage";
-import { Zap, Loader2, AlertTriangle } from "lucide-react";
+import { Zap, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DetailedFeedbackModal } from "@/components/feedback/DetailedFeedbackModal";
 
 interface SidebarProps {
     analysis: AnalysisResult | null;
@@ -23,6 +24,7 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
     const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
     const [aiConfigured, setAiConfigured] = useState(false);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
+    const [detailedFeedbackOpen, setDetailedFeedbackOpen] = useState(false);
 
     const score = analysis?.score ?? 0;
     const gradeLevel = analysis?.gradeLevel ?? 0;
@@ -359,7 +361,18 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
 
                 {evaluation && evaluation.suggestions.length > 0 && (
                     <div className="mt-4 border-t border-[var(--border-color)] pt-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-3">AI Feedback</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50">AI Feedback</h3>
+                            {(evaluation.detailedFeedback?.length || evaluation.weakArguments?.length) ? (
+                                <button
+                                    onClick={() => setDetailedFeedbackOpen(true)}
+                                    className="text-[10px] text-primary hover:underline flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity"
+                                >
+                                    view all feedback
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                            ) : null}
+                        </div>
                         <div className="space-y-2">
                             {evaluation.suggestions.map((suggestion, idx) => (
                                 <div key={idx} className="text-xs text-[var(--foreground)] opacity-80 py-1">
@@ -367,8 +380,19 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                                 </div>
                             ))}
                         </div>
+                        {evaluation.weakArguments && evaluation.weakArguments.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50">
+                                <div className="text-[10px] font-semibold text-amber-500 mb-1 flex items-center gap-1">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    Weak Arguments Found
+                                </div>
+                                <p className="text-[10px] opacity-60">
+                                    {evaluation.weakArguments.length} potential issue{evaluation.weakArguments.length > 1 ? 's' : ''} detected.
+                                </p>
+                            </div>
+                        )}
                         {(evaluation.tokensUsed || (showCostEstimate && evaluation.cost !== undefined)) && (
-                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
+                            <div className="mt-3 pt-3 border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
                                 <span>Tokens: {evaluation.tokensUsed?.toLocaleString()}</span>
                                 {showCostEstimate && (
                                     <span>Cost: ${evaluation.cost?.toFixed(4)}</span>
@@ -401,6 +425,13 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                     {isEvaluating ? 'ANALYZING...' : 'ANALYZE WITH AI'}
                 </button>
             </div>
+
+            <DetailedFeedbackModal
+                open={detailedFeedbackOpen}
+                onOpenChange={setDetailedFeedbackOpen}
+                detailedFeedback={evaluation?.detailedFeedback}
+                weakArguments={evaluation?.weakArguments}
+            />
         </aside>
     );
 });
