@@ -282,26 +282,15 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
         if (!isLink) {
             editor.update(() => {
                 const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                    // If no text is selected, insert placeholder text and select it
-                    if (selection.isCollapsed()) {
-                        selection.insertText("link");
-                        // Select the text we just inserted
-                        const anchor = selection.anchor;
-                        selection.setTextNodeRange(
-                            anchor.getNode(),
-                            anchor.offset - 4,
-                            anchor.getNode(),
-                            anchor.offset
-                        );
-                    }
+                if ($isRangeSelection(selection) && selection.isCollapsed()) {
+                    // If no text is selected, insert placeholder text
+                    selection.insertText("link");
                 }
             });
-            // Dispatch the command after selection is set
-            setTimeout(() => {
-                editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
-                setIsLinkEditMode(true);
-            }, 0);
+            // Apply link command after inserting text
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+            // Wait for link node to be created before showing editor
+            setTimeout(() => setIsLinkEditMode(true), 10);
         } else {
             setIsLinkEditMode(false);
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
