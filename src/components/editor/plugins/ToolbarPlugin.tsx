@@ -284,16 +284,21 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 const selection = $getSelection();
                 if ($isRangeSelection(selection)) {
                     if (selection.isCollapsed()) {
-                        // If no text selected, insert placeholder and select it
+                        // If no text selected, insert placeholder text
                         const textNode = selection.anchor.getNode();
                         const offset = selection.anchor.offset;
                         selection.insertText("link");
-                        // Move selection back to cover the inserted text
-                        textNode.select(offset, offset + 4);
+                        // Select the text we just inserted
+                        const newSelection = textNode.select(offset, offset + 4);
+                        if ($isRangeSelection(newSelection)) {
+                            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+                        }
+                    } else {
+                        // Text is already selected, just apply link
+                        editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
                     }
                 }
             });
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
             setIsLinkEditMode(true);
         } else {
             setIsLinkEditMode(false);
