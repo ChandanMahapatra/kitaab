@@ -139,10 +139,11 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
             <div className="flex flex-col gap-[6px]" role="list">
                 {headings.map((heading, index) => {
                     const isHovered = hoveredIndex === index;
-                    const lineWidth = getLineWidth(heading.level);
+                    const baseLineWidth = getLineWidth(heading.level);
+                    const lineWidth = isHovered ? baseLineWidth + 8 : baseLineWidth;
                     const opacity = isContainerHovered
                         ? isHovered
-                            ? 0.9
+                            ? 1
                             : 0.35
                         : 0.15;
 
@@ -160,7 +161,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                         >
                             {/* The line */}
                             <div
-                                className="h-[2px] rounded-full transition-all duration-150"
+                                className="h-[2px] rounded-full transition-all duration-200 ease-out"
                                 style={{
                                     width: `${lineWidth}px`,
                                     backgroundColor: "var(--foreground)",
