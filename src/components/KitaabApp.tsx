@@ -181,12 +181,12 @@ export default function KitaabApp() {
                                 <RichTextPlugin
                                     contentEditable={
                                         <ContentEditable
-                                            className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
+                                            className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-base text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
                                         />
                                     }
                                     placeholder={
                                         <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
-                                            <span className="text-[var(--foreground)] text-lg opacity-40 text-pretty">Start typing here...</span>
+                                            <span className="text-[var(--foreground)] text-base opacity-40 text-pretty">Start typing here...</span>
                                         </div>
                                     }
                                     ErrorBoundary={LexicalErrorBoundary}

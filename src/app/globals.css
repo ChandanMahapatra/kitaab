@@ -158,31 +158,38 @@ input[type="checkbox"] {
 
 .issue-highlight-yellow {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-amber {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-red {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-purple {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-blue {
     background-color: transparent !important;
     text-decoration: none !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-emerald {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-highlight-primary {
     background-color: transparent !important;
+    font-size: 14px !important;
 }
 
 .issue-muted {
