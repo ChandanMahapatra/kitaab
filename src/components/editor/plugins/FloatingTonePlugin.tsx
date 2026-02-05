@@ -39,6 +39,12 @@ export function FloatingTonePlugin() {
     const updatePosition = useCallback(() => {
         if (isLoading) return;
 
+        // Don't show popover if AI isn't configured
+        if (!aiConfigured) {
+            setPosition(null);
+            return;
+        }
+
         const nativeSelection = window.getSelection();
         if (!nativeSelection || nativeSelection.rangeCount === 0 || nativeSelection.isCollapsed) {
             setPosition(null);
@@ -66,7 +72,7 @@ export function FloatingTonePlugin() {
             top: rect.top + window.scrollY - 8,
             left: rect.left + window.scrollX + rect.width / 2,
         });
-    }, [editor, isLoading]);
+    }, [editor, isLoading, aiConfigured]);
 
     useEffect(() => {
         const handleMouseDown = () => { isMouseDownRef.current = true; };
@@ -140,8 +146,18 @@ export function FloatingTonePlugin() {
         setIsLoading(true);
         setActiveTone(tone);
 
+        const TIMEOUT_MS = 30000; // 30 second timeout
+
         try {
-            const result = await changeToneWithSettings(selectedText, tone);
+            // Wrap the API call with a timeout
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error("Request timed out. Please try again.")), TIMEOUT_MS);
+            });
+
+            const result = await Promise.race([
+                changeToneWithSettings(selectedText, tone),
+                timeoutPromise
+            ]);
 
             editor.update(() => {
                 const selection = $getSelection();
@@ -177,12 +193,8 @@ export function FloatingTonePlugin() {
                 transform: 'translate(-50%, -100%)',
             }}
         >
-            <div className="bg-[var(--background)] border border-[var(--border-color)] rounded-lg shadow-xl p-1.5 flex items-center gap-1 flex-wrap max-w-[360px]">
-                {!aiConfigured ? (
-                    <span className="text-[11px] text-[var(--foreground)] opacity-50 px-2 py-1">
-                        Configure AI in Settings to change tone
-                    </span>
-                ) : isLoading ? (
+            <div className="bg-[var(--background)] border border-[var(--border-color)] rounded-lg shadow-xl p-1.5 flex items-center gap-1 flex-wrap max-w-[400px]">
+                {isLoading ? (
                     <div className="flex items-center gap-2 px-3 py-1.5">
                         <Loader2 className="w-3 h-3 animate-spin text-[var(--color-primary)]" />
                         <span className="text-[11px] text-[var(--foreground)] opacity-70">

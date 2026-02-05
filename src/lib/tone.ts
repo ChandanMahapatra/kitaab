@@ -3,14 +3,14 @@ import { calculateCostWithPricing } from './pricing';
 import { loadPricingCache, loadSettings, saveSettings } from './storage';
 
 export const TONE_OPTIONS = [
-    { id: 'professional', label: 'Professional' },
-    { id: 'casual', label: 'Casual' },
-    { id: 'formal', label: 'Formal' },
-    { id: 'friendly', label: 'Friendly' },
-    { id: 'concise', label: 'Concise' },
-    { id: 'academic', label: 'Academic' },
     { id: 'creative', label: 'Creative' },
     { id: 'persuasive', label: 'Persuasive' },
+    { id: 'professional', label: 'Professional' },
+    { id: 'casual', label: 'Casual' },
+    { id: 'friendly', label: 'Friendly' },
+    { id: 'concise', label: 'Concise' },
+    { id: 'simplify', label: 'Simplify' },
+    { id: 'active-voice', label: 'Active Voice' },
 ] as const;
 
 export type ToneId = typeof TONE_OPTIONS[number]['id'];
@@ -38,7 +38,15 @@ export async function changeTone(
         effectiveBaseURL = `${effectiveBaseURL}/v1`;
     }
 
-    const prompt = `Rewrite the following text in a ${tone} tone.
+    const toneInstructions: Record<string, string> = {
+        'simplify': 'Simplify the following text. Use shorter sentences, simpler words, and remove unnecessary complexity while preserving the meaning.',
+        'active-voice': 'Rewrite the following text using active voice instead of passive voice. Make subjects perform the actions directly.',
+        'default': `Rewrite the following text in a ${tone} tone.`
+    };
+
+    const instruction = toneInstructions[tone] || toneInstructions['default'];
+
+    const prompt = `${instruction}
 Rules:
 - Only return the rewritten text, nothing else.
 - Preserve all markdown formatting (headings, bold, italic, lists, links, code blocks, etc.).
