@@ -380,19 +380,8 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                                 </div>
                             ))}
                         </div>
-                        {evaluation.weakArguments && evaluation.weakArguments.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50">
-                                <div className="text-[10px] font-semibold text-amber-500 mb-1 flex items-center gap-1">
-                                    <AlertTriangle className="w-2.5 h-2.5" />
-                                    Weak Arguments Found
-                                </div>
-                                <p className="text-[10px] opacity-60">
-                                    {evaluation.weakArguments.length} potential issue{evaluation.weakArguments.length > 1 ? 's' : ''} detected.
-                                </p>
-                            </div>
-                        )}
                         {(evaluation.tokensUsed || (showCostEstimate && evaluation.cost !== undefined)) && (
-                            <div className="mt-3 pt-3 border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
+                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]/50 text-[10px] opacity-50 flex justify-between">
                                 <span>Tokens: {evaluation.tokensUsed?.toLocaleString()}</span>
                                 {showCostEstimate && (
                                     <span>Cost: ${evaluation.cost?.toFixed(4)}</span>
