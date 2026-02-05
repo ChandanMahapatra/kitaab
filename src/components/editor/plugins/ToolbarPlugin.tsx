@@ -280,8 +280,28 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
     // Link handler
     const insertLink = useCallback(() => {
         if (!isLink) {
-            setIsLinkEditMode(true);
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+            editor.update(() => {
+                const selection = $getSelection();
+                if ($isRangeSelection(selection)) {
+                    // If no text is selected, insert placeholder text and select it
+                    if (selection.isCollapsed()) {
+                        selection.insertText("link");
+                        // Select the text we just inserted
+                        const anchor = selection.anchor;
+                        selection.setTextNodeRange(
+                            anchor.getNode(),
+                            anchor.offset - 4,
+                            anchor.getNode(),
+                            anchor.offset
+                        );
+                    }
+                }
+            });
+            // Dispatch the command after selection is set
+            setTimeout(() => {
+                editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+                setIsLinkEditMode(true);
+            }, 0);
         } else {
             setIsLinkEditMode(false);
             editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
