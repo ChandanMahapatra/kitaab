@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -16,11 +16,16 @@ import { HorizontalRuleNode, $createHorizontalRuleNode, $isHorizontalRuleNode } 
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
+import { AutoLinkPlugin } from "@lexical/react/LexicalAutoLinkPlugin";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TRANSFORMERS, ElementTransformer } from "@lexical/markdown";
 import EditorTheme from "@/components/editor/EditorTheme";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import ToolbarPlugin from "@/components/editor/plugins/ToolbarPlugin";
+import FloatingLinkEditorPlugin from "@/components/editor/plugins/FloatingLinkEditorPlugin";
 import { DebouncedAutoSavePlugin } from "@/components/editor/plugins/AutoSavePlugin";
 import { ContentInitializationPlugin } from "@/components/editor/plugins/ContentInitializationPlugin";
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
@@ -29,11 +34,13 @@ import { IssueHighlighterPlugin } from "@/components/editor/plugins/IssueHighlig
 import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceHighlighterPlugin";
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePlugin";
+import LinkClickPlugin from "@/components/editor/plugins/LinkClickPlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
 import { isLocalProvider } from "@/lib/ai";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
+import { MATCHERS, validateUrl } from "@/lib/linkUtils";
 import { LexicalNode } from "lexical";
 
 // Custom horizontal rule transformer for markdown shortcut (---)
@@ -46,8 +53,6 @@ const HORIZONTAL_RULE_TRANSFORMER: ElementTransformer = {
     replace: (parentNode, _children, _match, isImport) => {
         const line = $createHorizontalRuleNode();
 
-        // When importing or if there's a next sibling, replace the paragraph
-        // Otherwise, insert before (keeps cursor in a new paragraph after)
         if (isImport || parentNode.getNextSibling() != null) {
             parentNode.replace(line);
         } else {
@@ -89,6 +94,15 @@ export default function KitaabApp() {
     const [persistedCost, setPersistedCost] = useState(0);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
     const [hoveredIssueType, setHoveredIssueType] = useState<string | null>(null);
+    const [isLinkEditMode, setIsLinkEditMode] = useState(false);
+    const editorScrollRef = useRef<HTMLDivElement>(null);
+    const [editorAnchorElem, setEditorAnchorElem] = useState<HTMLDivElement | null>(null);
+
+    const onRef = useCallback((elem: HTMLDivElement | null) => {
+        if (elem !== null) {
+            setEditorAnchorElem(elem);
+        }
+    }, []);
 
     const handleHoverHighlightChange = useCallback(
         (type: string | null) => setHoveredIssueType(type),
@@ -130,8 +144,7 @@ export default function KitaabApp() {
                 const cached = await loadPricingCache();
                 const cacheAge = cached?.lastUpdated ? Date.now() - new Date(cached.lastUpdated).getTime() : Infinity;
                 const oneDay = 24 * 60 * 60 * 1000;
-                
-                // Fetch if no cache or cache is older than 1 day
+
                 if (!cached || cacheAge > oneDay) {
                     const pricing = await fetchModelPricing();
                     if (pricing && pricing.length > 0) {
@@ -159,26 +172,34 @@ export default function KitaabApp() {
                     setTitle={setDocTitle}
                 />
 
+                <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
+
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative transition-colors duration-300">
-                        <div className="flex-1 overflow-y-auto relative scrollbar-thin">
-                            <RichTextPlugin
-                                contentEditable={
-                                    <ContentEditable
-                                        className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
-                                    />
-                                }
-                                placeholder={
-                                    <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
-                                        <span className="text-[var(--foreground)] text-lg opacity-40 text-pretty">Start typing here...</span>
-                                    </div>
-                                }
-                                ErrorBoundary={LexicalErrorBoundary}
-                            />
+                        <div ref={editorScrollRef} className="flex-1 overflow-y-auto relative scrollbar-thin">
+                            <div ref={onRef} className="relative">
+                                <RichTextPlugin
+                                    contentEditable={
+                                        <ContentEditable
+                                            className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
+                                        />
+                                    }
+                                    placeholder={
+                                        <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
+                                            <span className="text-[var(--foreground)] text-lg opacity-40 text-pretty">Start typing here...</span>
+                                        </div>
+                                    }
+                                    ErrorBoundary={LexicalErrorBoundary}
+                                />
+                            </div>
                             <HistoryPlugin />
                             <AutoFocusPlugin />
                             <ListPlugin />
-                            <LinkPlugin />
+                            <CheckListPlugin />
+                            <LinkPlugin validateUrl={validateUrl} />
+                            <AutoLinkPlugin matchers={MATCHERS} />
+                            <LinkClickPlugin />
+                            <TabIndentationPlugin />
                             <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
                             <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />
@@ -189,6 +210,13 @@ export default function KitaabApp() {
                             <SentenceHighlighterPlugin analysis={analysis} />
                             <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
+                            {editorAnchorElem && (
+                                <FloatingLinkEditorPlugin
+                                    anchorElem={editorAnchorElem}
+                                    isLinkEditMode={isLinkEditMode}
+                                    setIsLinkEditMode={setIsLinkEditMode}
+                                />
+                            )}
                         </div>
                     </main>
 
