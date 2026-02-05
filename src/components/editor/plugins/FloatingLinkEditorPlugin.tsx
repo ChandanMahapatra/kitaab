@@ -242,7 +242,7 @@ function FloatingLinkEditor({
     return (
         <div
             ref={editorRef}
-            className="link-editor absolute top-0 left-0 z-50 max-w-[400px] w-full opacity-0 bg-[var(--background)] border border-[var(--border-color)] rounded-lg shadow-lg transition-opacity"
+            className={`link-editor absolute top-0 left-0 z-50 max-w-[400px] w-full opacity-0 transition-opacity ${isLink ? "bg-[var(--background)] border border-[var(--border-color)] rounded-lg shadow-lg" : ""}`}
         >
             {!isLink ? null : isLinkEditMode ? (
                 <div className="flex items-center gap-1 p-2">

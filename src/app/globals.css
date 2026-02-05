@@ -151,15 +151,6 @@ input[type="checkbox"] {
   opacity: 0.6;
 }
 
-/* Draggable block menu */
-.draggable-block-menu {
-  transition: opacity 0.15s ease;
-}
-
-.draggable-block-target-line {
-  transition: opacity 0.15s ease;
-}
-
 /* Link editor floating panel */
 .link-editor {
   will-change: transform;

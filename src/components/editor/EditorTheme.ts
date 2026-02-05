@@ -27,7 +27,7 @@ const EditorTheme: EditorThemeClasses = {
     indent: "editor-indent",
     image: "editor-image",
     horizontalRule: "editor-hr border-t border-[var(--border-color)] my-6",
-    link: "editor-link text-primary hover:underline cursor-pointer",
+    link: "editor-link text-primary no-underline hover:underline cursor-pointer",
     text: {
         bold: "editor-text-bold font-bold",
         italic: "editor-text-italic italic",

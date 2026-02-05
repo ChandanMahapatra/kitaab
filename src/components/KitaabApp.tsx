@@ -26,7 +26,6 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import ToolbarPlugin from "@/components/editor/plugins/ToolbarPlugin";
 import FloatingLinkEditorPlugin from "@/components/editor/plugins/FloatingLinkEditorPlugin";
-import DraggableBlockPlugin from "@/components/editor/plugins/DraggableBlockPlugin";
 import { DebouncedAutoSavePlugin } from "@/components/editor/plugins/AutoSavePlugin";
 import { ContentInitializationPlugin } from "@/components/editor/plugins/ContentInitializationPlugin";
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
@@ -212,14 +211,11 @@ export default function KitaabApp() {
                             <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
                             {editorAnchorElem && (
-                                <>
-                                    <FloatingLinkEditorPlugin
-                                        anchorElem={editorAnchorElem}
-                                        isLinkEditMode={isLinkEditMode}
-                                        setIsLinkEditMode={setIsLinkEditMode}
-                                    />
-                                    <DraggableBlockPlugin anchorElem={editorAnchorElem} />
-                                </>
+                                <FloatingLinkEditorPlugin
+                                    anchorElem={editorAnchorElem}
+                                    isLinkEditMode={isLinkEditMode}
+                                    setIsLinkEditMode={setIsLinkEditMode}
+                                />
                             )}
                         </div>
                     </main>
