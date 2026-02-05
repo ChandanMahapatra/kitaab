@@ -72,6 +72,11 @@ function FloatingLinkEditor({
     const [linkUrl, setLinkUrl] = useState("");
     const [editedLinkUrl, setEditedLinkUrl] = useState("https://");
     const [lastSelection, setLastSelection] = useState<ReturnType<typeof $getSelection> | null>(null);
+    const isLinkEditModeRef = useRef(isLinkEditMode);
+
+    useEffect(() => {
+        isLinkEditModeRef.current = isLinkEditMode;
+    }, [isLinkEditMode]);
 
     const $updateLinkEditor = useCallback(() => {
         const selection = $getSelection();
@@ -88,7 +93,7 @@ function FloatingLinkEditor({
                 setLinkUrl("");
             }
 
-            if (isLinkEditMode) {
+            if (isLinkEditModeRef.current) {
                 setEditedLinkUrl(linkParent?.getURL() || "https://");
             }
         }
@@ -131,7 +136,7 @@ function FloatingLinkEditor({
             setIsLinkEditMode(false);
             setLinkUrl("");
         }
-    }, [anchorElem, editor, isLinkEditMode, setIsLinkEditMode]);
+    }, [anchorElem, editor, setIsLinkEditMode]);
 
     useEffect(() => {
         const scrollerElem = anchorElem.parentElement;
@@ -166,7 +171,7 @@ function FloatingLinkEditor({
                 SELECTION_CHANGE_COMMAND,
                 () => {
                     $updateLinkEditor();
-                    return true;
+                    return false;
                 },
                 COMMAND_PRIORITY_LOW
             ),
@@ -203,7 +208,8 @@ function FloatingLinkEditor({
 
     const handleLinkSubmission = () => {
         if (lastSelection !== null) {
-            if (linkUrl !== "") {
+            const trimmedUrl = editedLinkUrl.trim();
+            if (trimmedUrl !== "" && trimmedUrl !== "https://") {
                 editor.update(() => {
                     const selection = $getSelection();
                     if ($isRangeSelection(selection)) {
@@ -214,11 +220,11 @@ function FloatingLinkEditor({
                         if ($isAutoLinkNode(linkParent)) {
                             // Remove the AutoLinkNode and replace with a regular LinkNode
                             const children = linkParent.getChildren();
-                            const newLinkNode = new LinkNode(sanitizeUrl(editedLinkUrl));
+                            const newLinkNode = new LinkNode(sanitizeUrl(trimmedUrl));
                             children.forEach(child => newLinkNode.append(child));
                             linkParent.replace(newLinkNode);
                         } else {
-                            editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl(editedLinkUrl));
+                            editor.dispatchCommand(TOGGLE_LINK_COMMAND, sanitizeUrl(trimmedUrl));
                         }
                     }
                 });

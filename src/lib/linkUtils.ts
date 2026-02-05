@@ -14,13 +14,26 @@ export function sanitizeUrl(url: string): string {
         }
         return url;
     } catch {
-        // Malformed URL - check for dangerous schemes before returning
-        const lowercaseUrl = url.toLowerCase().trim();
-        if (lowercaseUrl.startsWith("javascript:") || lowercaseUrl.startsWith("data:") || lowercaseUrl.startsWith("vbscript:")) {
+        // Malformed URL - use allowlist approach for relative URLs
+        const trimmedUrl = url.trim();
+        const lowercaseUrl = trimmedUrl.toLowerCase();
+
+        // Block any URL with a scheme-like pattern that isn't supported
+        if (lowercaseUrl.includes(":")) {
+            // Allow only specific relative schemes
+            if (lowercaseUrl.startsWith("#") || lowercaseUrl.startsWith("?")) {
+                return trimmedUrl;
+            }
             return "about:blank";
         }
-        // Return as-is for relative URLs or other valid non-absolute URLs
-        return url;
+
+        // Allow relative paths (/, ./, ../)
+        if (lowercaseUrl.startsWith("/") || lowercaseUrl.startsWith("./") || lowercaseUrl.startsWith("../")) {
+            return trimmedUrl;
+        }
+
+        // For anything else that doesn't parse as a URL, reject it
+        return "about:blank";
     }
 }
 

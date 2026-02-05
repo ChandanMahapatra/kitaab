@@ -16,6 +16,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 // Google Fonts URL for all editor font families
+// Using display=optional to avoid layout shifts and improve performance
 const EDITOR_FONTS_URL =
   "https://fonts.googleapis.com/css2?" +
   [
@@ -34,7 +35,7 @@ const EDITOR_FONTS_URL =
     "family=Neuton:wght@400;700",
     "family=Cardo:wght@400;700",
   ].join("&") +
-  "&display=swap";
+  "&display=optional";
 
 export const metadata: Metadata = {
   title: "Kitaab",
