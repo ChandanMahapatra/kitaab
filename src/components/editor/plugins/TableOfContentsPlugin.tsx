@@ -136,7 +136,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                 setHoveredIndex(null);
             }}
         >
-            <div className="flex flex-col gap-[6px]" role="list">
+            <div className="flex flex-col gap-[10px]" role="list">
                 {headings.map((heading, index) => {
                     const isHovered = hoveredIndex === index;
                     const baseLineWidth = getLineWidth(heading.level);
@@ -147,10 +147,13 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                             : 0.35
                         : 0.15;
 
+                    // Use accent color on hover, foreground otherwise
+                    const lineColor = isHovered ? "var(--accent)" : "var(--foreground)";
+
                     return (
                         <div
                             key={heading.key}
-                            className="relative flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--foreground)] focus:ring-opacity-50 rounded"
+                            className="relative flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--foreground)] focus:ring-opacity-50 rounded py-1 px-2 -ml-2"
                             role="listitem"
                             tabIndex={0}
                             aria-label={`Jump to ${heading.text}`}
@@ -164,7 +167,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                                 className="h-[2px] rounded-full transition-all duration-200 ease-out"
                                 style={{
                                     width: `${lineWidth}px`,
-                                    backgroundColor: "var(--foreground)",
+                                    backgroundColor: lineColor,
                                     opacity,
                                 }}
                             />
