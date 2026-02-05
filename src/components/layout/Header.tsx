@@ -15,6 +15,7 @@ import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
 import { $createCodeNode } from "@lexical/code";
 import { INSERT_HORIZONTAL_RULE_COMMAND } from "@lexical/react/LexicalHorizontalRuleNode";
 import { $getNearestNodeOfType } from "@lexical/utils";
+import { ToneDropdown } from "@/components/layout/ToneDropdown";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -144,6 +145,8 @@ export const Header = memo(function Header({ title = "Untitled", setTitle }: Hea
                             className="text-sm font-medium text-[var(--foreground)] bg-transparent border-none outline-none hover:opacity-70 transition-opacity w-48 placeholder-neutral-400"
                             placeholder="Untitled draft"
                         />
+
+                        <ToneDropdown buttonClass={buttonClass} />
 
                         <div className="flex items-center gap-1 h-6 pl-4 border-l border-[var(--border-color)]">
                             <DropdownMenu.Root>

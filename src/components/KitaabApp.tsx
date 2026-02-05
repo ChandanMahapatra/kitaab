@@ -33,6 +33,7 @@ import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
 import { isLocalProvider } from "@/lib/ai";
+import { FloatingTonePlugin } from "@/components/editor/plugins/FloatingTonePlugin";
 import { IssueNode } from "@/components/editor/nodes/IssueNode";
 import { LexicalNode } from "lexical";
 
@@ -189,6 +190,7 @@ export default function KitaabApp() {
                             <SentenceHighlighterPlugin analysis={analysis} />
                             <IssueVisibilityPlugin hoveredIssueType={hoveredIssueType} enabled={true} />
                             <AnalysisPlugin onAnalysisUpdate={setAnalysis} />
+                            <FloatingTonePlugin />
                         </div>
                     </main>
 
