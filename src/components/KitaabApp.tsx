@@ -35,6 +35,7 @@ import { SentenceHighlighterPlugin } from "@/components/editor/plugins/SentenceH
 import { IssueVisibilityPlugin } from "@/components/editor/plugins/IssueVisibilityPlugin";
 import { MarkdownCachePlugin } from "@/components/editor/plugins/MarkdownCachePlugin";
 import LinkClickPlugin from "@/components/editor/plugins/LinkClickPlugin";
+import { TableOfContentsPlugin } from "@/components/editor/plugins/TableOfContentsPlugin";
 import { AnalysisResult } from "@/lib/analysis";
 import { loadSettings, savePricingCache, loadPricingCache } from "@/lib/storage";
 import { fetchModelPricing } from "@/lib/pricing";
@@ -176,6 +177,7 @@ export default function KitaabApp() {
 
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative transition-colors duration-300">
+                        <TableOfContentsPlugin scrollContainerRef={editorScrollRef} />
                         <div ref={editorScrollRef} className="flex-1 overflow-y-auto relative scrollbar-thin">
                             <div ref={onRef} className="relative">
                                 <RichTextPlugin
