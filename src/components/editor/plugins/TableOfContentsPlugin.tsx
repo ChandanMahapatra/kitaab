@@ -128,7 +128,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
 
     return (
         <nav
-            className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col items-end z-20 py-4"
+            className="absolute left-2 -translate-y-1/2 flex flex-col items-end z-20 py-4"
             aria-label="Table of Contents"
             onMouseEnter={() => setIsContainerHovered(true)}
             onMouseLeave={() => {
@@ -136,7 +136,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                 setHoveredIndex(null);
             }}
         >
-            <div className="flex flex-col gap-[6px]" role="list">
+            <div className="flex flex-col" role="list">
                 {headings.map((heading, index) => {
                     const isHovered = hoveredIndex === index;
                     const lineWidth = getLineWidth(heading.level);
@@ -145,6 +145,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                             ? 0.9
                             : 0.35
                         : 0.15;
+                    const lineColor = isHovered ? "var(--color-primary)" : "var(--foreground)";
 
                     return (
                         <div
@@ -163,7 +164,7 @@ export function TableOfContentsPlugin({ scrollContainerRef }: TableOfContentsPlu
                                 className="h-[2px] rounded-full transition-all duration-150"
                                 style={{
                                     width: `${lineWidth}px`,
-                                    backgroundColor: "var(--foreground)",
+                                    backgroundColor: lineColor,
                                     opacity,
                                 }}
                             />
