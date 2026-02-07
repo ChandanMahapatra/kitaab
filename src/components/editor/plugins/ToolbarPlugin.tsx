@@ -8,6 +8,9 @@ import {
     $isRootOrShadowRoot,
     $createParagraphNode,
     $createTextNode,
+    $getRoot,
+    $createRangeSelection,
+    $setSelection,
     CAN_REDO_COMMAND,
     CAN_UNDO_COMMAND,
     COMMAND_PRIORITY_CRITICAL,
@@ -87,7 +90,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [blockType, setBlockType] = useState("paragraph");
-    const [fontFamily, setFontFamily] = useState("");
+    const [fontFamily, setFontFamily] = useState("IBM Plex Mono");
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [isUnderline, setIsUnderline] = useState(false);
@@ -269,14 +272,31 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
         }
     };
 
-    // Font family handler
+    // Font family handler - applies to entire editor content
     const onFontFamilySelect = (family: string) => {
         editor.update(() => {
-            const selection = $getSelection();
-            if (selection !== null) {
-                $patchStyleText(selection, { "font-family": family });
-            }
+            const root = $getRoot();
+            const allTextNodes = root.getAllTextNodes();
+
+            if (allTextNodes.length === 0) return;
+
+            // Create a selection that spans all text content
+            const firstNode = allTextNodes[0];
+            const lastNode = allTextNodes[allTextNodes.length - 1];
+
+            const rangeSelection = $createRangeSelection();
+            rangeSelection.anchor.set(firstNode.getKey(), 0, "text");
+            rangeSelection.focus.set(lastNode.getKey(), lastNode.getTextContentSize(), "text");
+
+            $setSelection(rangeSelection);
+            $patchStyleText(rangeSelection, { "font-family": family });
+
+            // Clear selection after applying style
+            $setSelection(null);
         });
+
+        // Update the displayed font family
+        setFontFamily(family);
     };
 
     // Link handler

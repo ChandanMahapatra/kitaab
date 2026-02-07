@@ -174,22 +174,22 @@ export default function KitaabApp() {
                     setTitle={setDocTitle}
                 />
 
-                <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
-
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative transition-colors duration-300">
+                        <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
                         <TableOfContentsPlugin scrollContainerRef={editorScrollRef} />
                         <div ref={editorScrollRef} className="flex-1 overflow-y-auto relative scrollbar-thin">
                             <div ref={onRef} className="relative">
                                 <RichTextPlugin
                                     contentEditable={
                                         <ContentEditable
-                                            className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-lg text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty font-display"
+                                            className="writing-area min-h-full outline-none px-8 md:px-16 py-8 text-base text-[var(--foreground)] transition-colors max-w-3xl mx-auto text-pretty"
+                                            style={{ fontFamily: "IBM Plex Mono" }}
                                         />
                                     }
                                     placeholder={
                                         <div className="absolute top-8 left-0 right-0 px-8 md:px-16 pointer-events-none select-none max-w-3xl mx-auto">
-                                            <span className="text-[var(--foreground)] text-lg opacity-40 text-pretty">Start typing here...</span>
+                                            <span className="text-[var(--foreground)] text-base opacity-40 text-pretty" style={{ fontFamily: "IBM Plex Mono" }}>Start typing here...</span>
                                         </div>
                                     }
                                     ErrorBoundary={LexicalErrorBoundary}

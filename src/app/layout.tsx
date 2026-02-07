@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Lato, IBM_Plex_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
-const lato = Lato({
+const inter = Inter({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["300", "400", "700", "900"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
@@ -54,7 +54,7 @@ export default function RootLayout({
         <link href={EDITOR_FONTS_URL} rel="stylesheet" />
       </head>
       <body
-        className={`${lato.variable} ${ibmPlexMono.variable} antialiased`}
+        className={`${inter.variable} ${ibmPlexMono.variable} antialiased`}
       >
         <ToastProvider>
           {children}
