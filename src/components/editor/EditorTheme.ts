@@ -7,12 +7,12 @@ const EditorTheme: EditorThemeClasses = {
     paragraph: "editor-paragraph mb-6 leading-relaxed text-pretty",
     quote: "editor-quote border-l-4 border-[var(--border-color)] pl-4 italic text-pretty my-6",
     heading: {
-        h1: "editor-heading-h1 font-display text-4xl font-bold mb-6 mt-10 text-balance",
-        h2: "editor-heading-h2 font-display text-2xl font-semibold mb-4 mt-8 text-balance",
-        h3: "editor-heading-h3 font-display text-xl font-semibold mb-4 mt-6 text-balance",
-        h4: "editor-heading-h4 font-display text-lg font-semibold mb-2 mt-6 text-balance",
-        h5: "editor-heading-h5 font-display text-base font-semibold mb-2 mt-4 text-balance",
-        h6: "editor-heading-h6 font-display text-sm font-semibold mb-2 mt-4 text-balance",
+        h1: "editor-heading-h1 text-4xl font-bold mb-6 mt-10 text-balance",
+        h2: "editor-heading-h2 text-2xl font-semibold mb-4 mt-8 text-balance",
+        h3: "editor-heading-h3 text-xl font-semibold mb-4 mt-6 text-balance",
+        h4: "editor-heading-h4 text-lg font-semibold mb-2 mt-6 text-balance",
+        h5: "editor-heading-h5 text-base font-semibold mb-2 mt-4 text-balance",
+        h6: "editor-heading-h6 text-sm font-semibold mb-2 mt-4 text-balance",
     },
     list: {
         nested: {
