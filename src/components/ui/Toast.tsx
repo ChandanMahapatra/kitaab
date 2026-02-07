@@ -1,13 +1,18 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
+
+export type ToastType = "success" | "error";
 
 interface ToastProps {
   message: string;
   isVisible: boolean;
+  type?: ToastType;
 }
 
-export function Toast({ message, isVisible }: ToastProps) {
+export function Toast({ message, isVisible, type = "success" }: ToastProps) {
+  const Icon = type === "error" ? AlertCircle : Check;
+
   return (
     <div
       className={`
@@ -27,7 +32,7 @@ export function Toast({ message, isVisible }: ToastProps) {
       role="alert"
       aria-live="polite"
     >
-      <Check className="w-4 h-4 text-[var(--toast-icon)]" />
+      <Icon className={`w-4 h-4 ${type === "error" ? "text-red-500" : "text-[var(--toast-icon)]"}`} />
       <span>{message}</span>
     </div>
   );

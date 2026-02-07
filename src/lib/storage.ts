@@ -10,7 +10,7 @@ interface Document {
     updatedAt: Date;
 }
 
-interface Settings {
+export interface Settings {
     provider?: string;
     model?: string;
     apiKey?: string;
