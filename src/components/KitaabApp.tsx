@@ -26,6 +26,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import ToolbarPlugin from "@/components/editor/plugins/ToolbarPlugin";
 import FloatingLinkEditorPlugin from "@/components/editor/plugins/FloatingLinkEditorPlugin";
+import KeyboardShortcutsPlugin from "@/components/editor/plugins/KeyboardShortcutsPlugin";
 import { DebouncedAutoSavePlugin } from "@/components/editor/plugins/AutoSavePlugin";
 import { ContentInitializationPlugin } from "@/components/editor/plugins/ContentInitializationPlugin";
 import CodeHighlightPlugin from "@/components/editor/plugins/CodeHighlightPlugin";
@@ -203,6 +204,7 @@ export default function KitaabApp() {
                             <TabIndentationPlugin />
                             <HorizontalRulePlugin />
                             <CodeHighlightPlugin />
+                            <KeyboardShortcutsPlugin setIsLinkEditMode={setIsLinkEditMode} />
                             <MarkdownShortcutPlugin transformers={[...TRANSFORMERS, HORIZONTAL_RULE_TRANSFORMER]} />
                             <MarkdownCachePlugin />
                             <DebouncedAutoSavePlugin />
