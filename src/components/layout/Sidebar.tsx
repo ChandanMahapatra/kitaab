@@ -204,12 +204,25 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                 return;
             }
 
+            const issuesByTypeForAI = analysis?.issues.reduce((acc, issue) => {
+                acc[issue.type] = (acc[issue.type] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>) ?? {};
+
+            const analysisContext = analysis ? {
+                score: analysis.score,
+                gradeLevel: analysis.gradeLevel,
+                fleschScore: analysis.fleschScore,
+                issues: Object.entries(issuesByTypeForAI).map(([type, count]) => ({ type, count })),
+            } : undefined;
+
             const result = await evaluateText(
                 markdown,
                 settings.provider,
                 model,
                 settings.apiKey || "",
-                settings.baseURL
+                settings.baseURL,
+                analysisContext
             );
 
             setEvaluation(result);

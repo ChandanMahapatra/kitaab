@@ -48,8 +48,14 @@ export interface FeedbackPoint {
     category: 'style' | 'clarity' | 'argument' | 'structure' | 'word-choice';
     issue: string;
     suggestion: string;
-    source?: 'king' | 'strunk' | 'pinker'; // On Writing, Elements of Style, Sense of Style
     severity: 'high' | 'medium' | 'low';
+}
+
+export interface AnalysisContext {
+    score: number;
+    gradeLevel: number;
+    fleschScore: number;
+    issues: { type: string; count: number }[];
 }
 
 export interface EvaluationResult {
@@ -188,7 +194,8 @@ export async function evaluateText(
     providerId: string,
     model: string,
     apiKey: string,
-    baseURL?: string
+    baseURL?: string,
+    analysisContext?: AnalysisContext
 ): Promise<EvaluationResult> {
     const provider = providers.find(p => p.id === providerId);
     if (!provider) throw new Error("Provider not found");
@@ -200,16 +207,27 @@ export async function evaluateText(
         effectiveBaseURL = `${effectiveBaseURL}/v1`;
     }
 
-    const prompt = `You are an opinionated writing coach drawing from three authoritative sources:
-1. Stephen King's "On Writing" - values clarity, active voice, eliminating adverbs, and honest storytelling
-2. Strunk & White's "The Elements of Style" - emphasizes brevity, vigor, parallel construction, and omitting needless words
-3. Steven Pinker's "The Sense of Style" - focuses on coherence, reader awareness, and avoiding the curse of knowledge
+    let analysisSection = '';
+    if (analysisContext) {
+        const issuesSummary = analysisContext.issues
+            .map(i => `${i.type}: ${i.count}`)
+            .join(', ');
+        analysisSection = `
+The text has been analyzed with these current metrics:
+- Readability Score: ${analysisContext.score}/100
+- Grade Level: ${analysisContext.gradeLevel} (Coleman-Liau Index)
+- Flesch Reading Ease: ${analysisContext.fleschScore}/100
+- Detected issues: ${issuesSummary || 'none'}
 
-Evaluate the following text. Focus ONLY on prose quality—ignore markdown syntax, formatting symbols, and technical markup.
+Your feedback should specifically target improving these metrics. For example, if the grade level is high, suggest simplifying vocabulary or shortening sentences. If passive voice count is high, highlight specific instances to rewrite.
+`;
+    }
 
+    const prompt = `You are an expert writing coach. Evaluate the following text for prose quality—ignore markdown syntax, formatting symbols, and technical markup.
+${analysisSection}
 Provide:
 1. Scores (0-100) for Grammar, Clarity, and Overall quality
-2. Up to 3 brief suggestions (one line each) for the sidebar summary
+2. Up to 3 brief suggestions (one line each) ordered by severity (most critical first)
 3. Detailed feedback points with specific issues and fixes, categorized by type
 4. Any weak arguments or unsupported claims
 
@@ -226,7 +244,6 @@ DetailedFeedback: (JSON array)
   {
     "category": "style|clarity|argument|structure|word-choice",
     "severity": "high|medium|low",
-    "source": "king|strunk|pinker",
     "issue": "specific problem found",
     "suggestion": "how to fix it"
   }
@@ -358,8 +375,6 @@ function parseEvaluationResponse(response: string): EvaluationResult {
                                     .includes(item.category?.toLowerCase()) ? item.category.toLowerCase() : 'style';
                                 const validSeverity = ['high', 'medium', 'low']
                                     .includes(item.severity?.toLowerCase()) ? item.severity.toLowerCase() : 'medium';
-                                const validSource = ['king', 'strunk', 'pinker']
-                                    .includes(item.source?.toLowerCase()) ? item.source.toLowerCase() : undefined;
 
                                 if (!['style', 'clarity', 'argument', 'structure', 'word-choice'].includes(item.category?.toLowerCase())) {
                                     console.warn(`[AI Parse] Unrecognized category: ${item.category}, defaulting to 'style'`);
@@ -368,7 +383,6 @@ function parseEvaluationResponse(response: string): EvaluationResult {
                                 detailedFeedback.push({
                                     category: validCategory as FeedbackPoint['category'],
                                     severity: validSeverity as FeedbackPoint['severity'],
-                                    source: validSource as FeedbackPoint['source'] | undefined,
                                     issue: item.issue,
                                     suggestion: item.suggestion,
                                 });
@@ -391,6 +405,37 @@ function parseEvaluationResponse(response: string): EvaluationResult {
         } else if (currentSection === 'suggestions' && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
             const content = line.replace(/^[-•\d]+\.\s*|^-\s+/, '').trim();
             if (content) suggestions.push(content);
+        }
+    }
+
+    // Parse any remaining JSON buffer for detailed feedback
+    if (currentSection === 'detailed' && jsonBuffer) {
+        try {
+            const parsed = JSON.parse(jsonBuffer);
+            if (Array.isArray(parsed)) {
+                parsed.forEach((item) => {
+                    if (item.issue && item.suggestion) {
+                        const validCategory = ['style', 'clarity', 'argument', 'structure', 'word-choice']
+                            .includes(item.category?.toLowerCase()) ? item.category.toLowerCase() : 'style';
+                        const validSeverity = ['high', 'medium', 'low']
+                            .includes(item.severity?.toLowerCase()) ? item.severity.toLowerCase() : 'medium';
+
+                        if (!['style', 'clarity', 'argument', 'structure', 'word-choice'].includes(item.category?.toLowerCase())) {
+                            console.warn(`[AI Parse] Unrecognized category: ${item.category}, defaulting to 'style'`);
+                        }
+
+                        detailedFeedback.push({
+                            category: validCategory as FeedbackPoint['category'],
+                            severity: validSeverity as FeedbackPoint['severity'],
+                            issue: item.issue,
+                            suggestion: item.suggestion,
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('[AI Parse] Failed to parse DetailedFeedback JSON:', e);
+            console.error('[AI Parse] JSON buffer was:', jsonBuffer);
         }
     }
 
