@@ -195,28 +195,6 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
         });
     }, [editor]);
 
-    // Initialize editor with IBM Plex Mono on mount
-    useEffect(() => {
-        editor.update(() => {
-            const root = $getRoot();
-            const allTextNodes = root.getAllTextNodes();
-
-            // Only apply if there's content
-            if (allTextNodes.length > 0) {
-                const firstNode = allTextNodes[0];
-                const lastNode = allTextNodes[allTextNodes.length - 1];
-
-                const rangeSelection = $createRangeSelection();
-                rangeSelection.anchor.set(firstNode.getKey(), 0, "text");
-                rangeSelection.focus.set(lastNode.getKey(), lastNode.getTextContentSize(), "text");
-
-                $setSelection(rangeSelection);
-                $patchStyleText(rangeSelection, { "font-family": "IBM Plex Mono" });
-                $setSelection(null);
-            }
-        });
-    }, [editor]);
-
     // Block format handlers
     const formatParagraph = () => {
         editor.update(() => {
