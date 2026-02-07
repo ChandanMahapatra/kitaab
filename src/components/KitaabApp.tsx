@@ -172,10 +172,9 @@ export default function KitaabApp() {
                     setTitle={setDocTitle}
                 />
 
-                <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
-
                 <div className="flex flex-1 overflow-hidden">
                     <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative transition-colors duration-300">
+                        <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
                         <div ref={editorScrollRef} className="flex-1 overflow-y-auto relative scrollbar-thin">
                             <div ref={onRef} className="relative">
                                 <RichTextPlugin
