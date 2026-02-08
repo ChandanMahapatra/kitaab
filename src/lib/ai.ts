@@ -51,6 +51,11 @@ export interface FeedbackPoint {
     severity: 'high' | 'medium' | 'low';
 }
 
+export interface WeakArgumentPoint {
+    issue: string;
+    suggestion: string;
+}
+
 export interface AnalysisContext {
     score: number;
     gradeLevel: number;
@@ -66,7 +71,7 @@ export interface EvaluationResult {
     };
     suggestions: string[];
     detailedFeedback?: FeedbackPoint[];
-    weakArguments?: string[];
+    weakArguments?: WeakArgumentPoint[];
     tokensUsed?: number;
     cost?: number;
 }
@@ -229,7 +234,7 @@ Provide:
 1. Scores (0-100) for Grammar, Clarity, and Overall quality
 2. Up to 3 brief suggestions (one line each) ordered by severity (most critical first)
 3. Detailed feedback points with specific issues and fixes, categorized by type
-4. Any weak arguments or unsupported claims
+4. Any weak arguments or unsupported claims with suggestions to strengthen them
 
 Format your response EXACTLY like this:
 Grammar: [score]
@@ -249,7 +254,12 @@ DetailedFeedback: (JSON array)
   }
 ]
 WeakArguments: (JSON array)
-["weak argument or unsupported claim 1", "weak argument or unsupported claim 2"]
+[
+  {
+    "issue": "specific weak argument or unsupported claim",
+    "suggestion": "how to strengthen this argument with evidence or reasoning"
+  }
+]
 
 Text:
 ${text}`;
@@ -341,7 +351,7 @@ function parseEvaluationResponse(response: string): EvaluationResult {
     let grammar = 0, clarity = 0, overall = 0;
     const suggestions: string[] = [];
     const detailedFeedback: FeedbackPoint[] = [];
-    const weakArguments: string[] = [];
+    const weakArguments: WeakArgumentPoint[] = [];
     let currentSection: 'none' | 'suggestions' | 'detailed' | 'weak' = 'none';
     let jsonBuffer = '';
 
@@ -444,7 +454,22 @@ function parseEvaluationResponse(response: string): EvaluationResult {
         try {
             const parsed = JSON.parse(jsonBuffer);
             if (Array.isArray(parsed)) {
-                weakArguments.push(...parsed.filter(item => typeof item === 'string'));
+                parsed.forEach(item => {
+                    // New format: object with issue and suggestion
+                    if (typeof item === 'object' && item !== null && item.issue && item.suggestion) {
+                        weakArguments.push({
+                            issue: String(item.issue),
+                            suggestion: String(item.suggestion)
+                        });
+                    }
+                    // Backward compatibility: old format (plain strings)
+                    else if (typeof item === 'string') {
+                        weakArguments.push({
+                            issue: item,
+                            suggestion: 'Consider providing evidence or reasoning to support this claim.'
+                        });
+                    }
+                });
             }
         } catch (e) {
             console.error('[AI Parse] Failed to parse WeakArguments JSON:', e);

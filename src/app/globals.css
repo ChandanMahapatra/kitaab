@@ -296,5 +296,5 @@ nav > div > div {
 }
 
 nav.absolute {
-  margin-top: 188px;
+  top: 50%;
 }

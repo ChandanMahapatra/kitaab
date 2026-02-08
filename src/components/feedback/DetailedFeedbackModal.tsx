@@ -3,14 +3,14 @@
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { FeedbackPoint } from "@/lib/ai";
+import { FeedbackPoint, WeakArgumentPoint } from "@/lib/ai";
 import { cn } from "@/lib/utils";
 
 interface DetailedFeedbackModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     detailedFeedback?: FeedbackPoint[];
-    weakArguments?: string[];
+    weakArguments?: WeakArgumentPoint[];
 }
 
 const categoryLabels: Record<FeedbackPoint['category'], string> = {
@@ -100,7 +100,10 @@ export function DetailedFeedbackModal({ open, onOpenChange, detailedFeedback, we
                                     <div className="divide-y divide-[var(--border-color)]">
                                         {weakArguments.map((arg, idx) => (
                                             <div key={idx} className="py-3 first:pt-0 last:pb-0">
-                                                <p className="text-sm opacity-70">{arg}</p>
+                                                <p className="text-sm opacity-80">{arg.issue}</p>
+                                                <p className="text-sm opacity-50 mt-1">
+                                                    {arg.suggestion}
+                                                </p>
                                             </div>
                                         ))}
                                     </div>
