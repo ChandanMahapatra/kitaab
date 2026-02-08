@@ -22,6 +22,15 @@ import { sanitizeUrl } from "@/lib/linkUtils";
 
 const IS_APPLE = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
+// OS and browser shortcuts that should never be intercepted
+const PROTECTED_OS_SHORTCUTS = new Set([
+    'c', 'x', 'v',        // Clipboard: copy, cut, paste
+    'z', 'y',             // Undo/Redo (Y for Windows Ctrl+Y)
+    'a',                  // Select all
+    'b', 'i', 'u',        // Text formatting (handled by Lexical's RichTextPlugin)
+    'f', 'r', 'w', 't', 'n', 's', 'p',  // Browser shortcuts (find, refresh, close, new tab, new window, save, print)
+]);
+
 interface KeyboardShortcutsPluginProps {
     setIsLinkEditMode: (isLinkEditMode: boolean) => void;
 }
@@ -36,9 +45,23 @@ export default function KeyboardShortcutsPlugin({ setIsLinkEditMode }: KeyboardS
 
             if (!modKey) return false;
 
+            // PROTECTION: Never intercept OS/browser shortcuts
+            // Allow paste, copy, cut, undo, redo, select all, and text formatting to work normally
+            const keyLower = key.toLowerCase();
+
+            // Protect simple modifier+key shortcuts (no shift, no alt)
+            if (!shiftKey && !altKey && PROTECTED_OS_SHORTCUTS.has(keyLower)) {
+                return false; // Pass through to browser/Lexical
+            }
+
+            // Also protect Cmd+Shift+Z (redo on Mac)
+            if (shiftKey && !altKey && keyLower === 'z') {
+                return false; // Pass through for redo
+            }
+
             // Text formatting shortcuts (Cmd/Ctrl + key, no shift, no alt)
             if (!shiftKey && !altKey) {
-                switch (key.toLowerCase()) {
+                switch (keyLower) {
                     case 'e':
                         // Cmd/Ctrl+E: Inline code
                         event.preventDefault();
@@ -54,7 +77,7 @@ export default function KeyboardShortcutsPlugin({ setIsLinkEditMode }: KeyboardS
 
             // Shift shortcuts (Cmd/Ctrl+Shift+key)
             if (shiftKey && !altKey) {
-                switch (key.toLowerCase()) {
+                switch (keyLower) {
                     case 's':
                         // Cmd/Ctrl+Shift+S: Strikethrough
                         event.preventDefault();
