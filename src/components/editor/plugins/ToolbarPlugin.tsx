@@ -62,6 +62,12 @@ const FONT_FAMILIES = [
 ];
 
 // Block type labels and icons
+// Platform-aware keyboard shortcut symbols
+const IS_APPLE = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+const MOD_KEY = IS_APPLE ? '⌘' : 'Ctrl';
+const ALT_KEY = IS_APPLE ? '⌥' : 'Alt';
+const SHIFT_KEY = IS_APPLE ? '⇧' : 'Shift';
+
 const BLOCK_TYPE_TO_LABEL: Record<string, { label: string; icon: React.ReactNode }> = {
     paragraph: { label: "Normal", icon: <Pilcrow className="w-4 h-4" /> },
     h1: { label: "Heading 1", icon: <Heading1 className="w-4 h-4" /> },
@@ -352,7 +358,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
                 className={btnClass}
                 aria-label="Undo"
-                title="Undo (Ctrl+Z)"
+                title={`Undo (${MOD_KEY}+Z)`}
             >
                 <Undo2 className="w-4 h-4" />
             </button>
@@ -362,7 +368,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
                 className={btnClass}
                 aria-label="Redo"
-                title="Redo (Ctrl+Y)"
+                title={`Redo (${MOD_KEY}+${IS_APPLE ? SHIFT_KEY + '+Z' : 'Y'})`}
             >
                 <Redo2 className="w-4 h-4" />
             </button>
@@ -389,27 +395,39 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                             <Pilcrow className="w-4 h-4" /> Normal
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={() => formatHeading("h1")}>
-                            <Heading1 className="w-4 h-4" /> Heading 1
+                            <Heading1 className="w-4 h-4" />
+                            <span className="flex-1">Heading 1</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{ALT_KEY}+1</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={() => formatHeading("h2")}>
-                            <Heading2 className="w-4 h-4" /> Heading 2
+                            <Heading2 className="w-4 h-4" />
+                            <span className="flex-1">Heading 2</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{ALT_KEY}+2</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={() => formatHeading("h3")}>
-                            <Heading3 className="w-4 h-4" /> Heading 3
+                            <Heading3 className="w-4 h-4" />
+                            <span className="flex-1">Heading 3</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{ALT_KEY}+3</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator className="h-px bg-[var(--border-color)] my-1" />
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={formatBulletList}>
-                            <List className="w-4 h-4" /> Bulleted List
+                            <List className="w-4 h-4" />
+                            <span className="flex-1">Bulleted List</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{SHIFT_KEY}+8</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={formatNumberedList}>
-                            <ListOrdered className="w-4 h-4" /> Numbered List
+                            <ListOrdered className="w-4 h-4" />
+                            <span className="flex-1">Numbered List</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{SHIFT_KEY}+7</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={formatCheckList}>
                             <ListChecks className="w-4 h-4" /> Check List
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator className="h-px bg-[var(--border-color)] my-1" />
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={formatQuote}>
-                            <Quote className="w-4 h-4" /> Quote
+                            <Quote className="w-4 h-4" />
+                            <span className="flex-1">Quote</span>
+                            <span className="text-xs opacity-50 ml-2">{MOD_KEY}+{SHIFT_KEY}+.</span>
                         </DropdownMenu.Item>
                         <DropdownMenu.Item className={dropdownItemClass} onSelect={formatCode}>
                             <Code2 className="w-4 h-4" /> Code Block
@@ -465,7 +483,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
                 className={cn(btnClass, isBold && btnActiveClass)}
                 aria-label="Bold"
-                title="Bold (Ctrl+B)"
+                title={`Bold (${MOD_KEY}+B)`}
             >
                 <Bold className="w-4 h-4" />
             </button>
@@ -475,7 +493,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
                 className={cn(btnClass, isItalic && btnActiveClass)}
                 aria-label="Italic"
-                title="Italic (Ctrl+I)"
+                title={`Italic (${MOD_KEY}+I)`}
             >
                 <Italic className="w-4 h-4" />
             </button>
@@ -485,7 +503,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
                 className={cn(btnClass, isUnderline && btnActiveClass)}
                 aria-label="Underline"
-                title="Underline (Ctrl+U)"
+                title={`Underline (${MOD_KEY}+U)`}
             >
                 <Underline className="w-4 h-4" />
             </button>
@@ -495,7 +513,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")}
                 className={cn(btnClass, isStrikethrough && btnActiveClass)}
                 aria-label="Strikethrough"
-                title="Strikethrough"
+                title={`Strikethrough (${MOD_KEY}+${SHIFT_KEY}+S)`}
             >
                 <Strikethrough className="w-4 h-4" />
             </button>
@@ -509,7 +527,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")}
                 className={cn(btnClass, isCode && btnActiveClass)}
                 aria-label="Inline code"
-                title="Code"
+                title={`Inline Code (${MOD_KEY}+E)`}
             >
                 <Code className="w-4 h-4" />
             </button>
@@ -522,7 +540,7 @@ export default function ToolbarPlugin({ setIsLinkEditMode }: ToolbarPluginProps)
                 onClick={insertLink}
                 className={cn(btnClass, isLink && btnActiveClass)}
                 aria-label="Insert link"
-                title="Insert link (Ctrl+K)"
+                title={`Insert Link (${MOD_KEY}+K)`}
             >
                 <Link2 className="w-4 h-4" />
             </button>
