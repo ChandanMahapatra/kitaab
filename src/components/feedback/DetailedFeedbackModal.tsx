@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, AlertTriangle } from "lucide-react";
+import { X } from "lucide-react";
 import { FeedbackPoint } from "@/lib/ai";
 import { cn } from "@/lib/utils";
 
@@ -54,38 +54,47 @@ export function DetailedFeedbackModal({ open, onOpenChange, detailedFeedback, we
                         </div>
                     ) : (
                         <div className="space-y-5">
-                            {Object.entries(groupedFeedback).map(([category, points]) => (
-                                <div key={category}>
-                                    <h3 className="text-xs font-bold uppercase tracking-widest opacity-50 mb-3">
-                                        {categoryLabels[category as FeedbackPoint['category']] || category}
-                                    </h3>
-                                    <div className="divide-y divide-[var(--border-color)]">
-                                        {points.map((point, idx) => (
-                                            <div key={idx} className="py-3 first:pt-0 last:pb-0">
-                                                <div className="flex items-start gap-3">
-                                                    <span className={cn(
-                                                        "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 mt-0.5",
-                                                        severityColors[point.severity]
-                                                    )}>
-                                                        {point.severity.toUpperCase()}
-                                                    </span>
-                                                    <div>
-                                                        <p className="text-sm opacity-80">{point.issue}</p>
-                                                        <p className="text-sm opacity-50 mt-1">
-                                                            {point.suggestion}
-                                                        </p>
-                                                    </div>
+                            {Object.entries(groupedFeedback).map(([category, points]) => {
+                                // Get unique severities for this category
+                                const severities = Array.from(new Set(points.map(p => p.severity)));
+                                const severityOrder = { high: 0, medium: 1, low: 2 };
+                                severities.sort((a, b) => severityOrder[a] - severityOrder[b]);
+
+                                return (
+                                    <div key={category}>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">
+                                                {categoryLabels[category as FeedbackPoint['category']] || category}
+                                            </h3>
+                                            {severities.map(severity => (
+                                                <span
+                                                    key={severity}
+                                                    className={cn(
+                                                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                                                        severityColors[severity]
+                                                    )}
+                                                >
+                                                    {severity.toUpperCase()}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <div className="divide-y divide-[var(--border-color)]">
+                                            {points.map((point, idx) => (
+                                                <div key={idx} className="py-3 first:pt-0 last:pb-0">
+                                                    <p className="text-sm opacity-80">{point.issue}</p>
+                                                    <p className="text-sm opacity-50 mt-1">
+                                                        {point.suggestion}
+                                                    </p>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {weakArguments && weakArguments.length > 0 && (
                                 <div>
-                                    <h3 className="text-xs font-bold uppercase tracking-widest opacity-50 mb-3 flex items-center gap-2 text-amber-500">
-                                        <AlertTriangle className="w-3 h-3" />
+                                    <h3 className="text-xs font-bold uppercase tracking-widest opacity-50 mb-3">
                                         Weak Arguments
                                     </h3>
                                     <div className="divide-y divide-[var(--border-color)]">
