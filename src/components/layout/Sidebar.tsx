@@ -4,8 +4,9 @@ import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
 import { AnalysisResult, Issue } from "@/lib/analysis";
 import { evaluateText, EvaluationResult, providers, isLocalProvider } from "@/lib/ai";
 import { loadSettings, saveSettings } from "@/lib/storage";
-import { Zap, Loader2, AlertTriangle } from "lucide-react";
+import { Zap, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DetailedFeedbackModal } from "@/components/feedback/DetailedFeedbackModal";
 
 interface SidebarProps {
     analysis: AnalysisResult | null;
@@ -23,6 +24,7 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
     const [activeIssueTypes, setActiveIssueTypes] = useState<Set<Issue['type']>>(new Set());
     const [aiConfigured, setAiConfigured] = useState(false);
     const [showCostEstimate, setShowCostEstimate] = useState(true);
+    const [detailedFeedbackOpen, setDetailedFeedbackOpen] = useState(false);
 
     const score = analysis?.score ?? 0;
     const gradeLevel = analysis?.gradeLevel ?? 0;
@@ -202,12 +204,25 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                 return;
             }
 
+            const issuesByTypeForAI = analysis?.issues.reduce((acc, issue) => {
+                acc[issue.type] = (acc[issue.type] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>) ?? {};
+
+            const analysisContext = analysis ? {
+                score: analysis.score,
+                gradeLevel: analysis.gradeLevel,
+                fleschScore: analysis.fleschScore,
+                issues: Object.entries(issuesByTypeForAI).map(([type, count]) => ({ type, count })),
+            } : undefined;
+
             const result = await evaluateText(
                 markdown,
                 settings.provider,
                 model,
                 settings.apiKey || "",
-                settings.baseURL
+                settings.baseURL,
+                analysisContext
             );
 
             setEvaluation(result);
@@ -359,7 +374,18 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
 
                 {evaluation && evaluation.suggestions.length > 0 && (
                     <div className="mt-4 border-t border-[var(--border-color)] pt-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50 mb-3">AI Feedback</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest opacity-50">AI Feedback</h3>
+                            {(evaluation.detailedFeedback?.length || evaluation.weakArguments?.length) ? (
+                                <button
+                                    onClick={() => setDetailedFeedbackOpen(true)}
+                                    className="text-[10px] text-primary hover:underline flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity"
+                                >
+                                    view all feedback
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                            ) : null}
+                        </div>
                         <div className="space-y-2">
                             {evaluation.suggestions.map((suggestion, idx) => (
                                 <div key={idx} className="text-xs text-[var(--foreground)] opacity-80 py-1">
@@ -401,6 +427,13 @@ export const Sidebar = memo(function Sidebar({ analysis, onHoverIssue, onHoverHi
                     {isEvaluating ? 'ANALYZING...' : 'ANALYZE WITH AI'}
                 </button>
             </div>
+
+            <DetailedFeedbackModal
+                open={detailedFeedbackOpen}
+                onOpenChange={setDetailedFeedbackOpen}
+                detailedFeedback={evaluation?.detailedFeedback}
+                weakArguments={evaluation?.weakArguments}
+            />
         </aside>
     );
 });

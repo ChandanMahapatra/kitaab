@@ -44,6 +44,20 @@ export const providers: Provider[] = [
     }
 ];
 
+export interface FeedbackPoint {
+    category: 'style' | 'clarity' | 'argument' | 'structure' | 'word-choice';
+    issue: string;
+    suggestion: string;
+    severity: 'high' | 'medium' | 'low';
+}
+
+export interface AnalysisContext {
+    score: number;
+    gradeLevel: number;
+    fleschScore: number;
+    issues: { type: string; count: number }[];
+}
+
 export interface EvaluationResult {
     scores: {
         grammar: number;
@@ -51,6 +65,8 @@ export interface EvaluationResult {
         overall: number;
     };
     suggestions: string[];
+    detailedFeedback?: FeedbackPoint[];
+    weakArguments?: string[];
     tokensUsed?: number;
     cost?: number;
 }
@@ -178,7 +194,8 @@ export async function evaluateText(
     providerId: string,
     model: string,
     apiKey: string,
-    baseURL?: string
+    baseURL?: string,
+    analysisContext?: AnalysisContext
 ): Promise<EvaluationResult> {
     const provider = providers.find(p => p.id === providerId);
     if (!provider) throw new Error("Provider not found");
@@ -190,19 +207,49 @@ export async function evaluateText(
         effectiveBaseURL = `${effectiveBaseURL}/v1`;
     }
 
-    const prompt = `Evaluate the following text for grammar, clarity, and overall writing quality. 
-Focus only on the prose content - ignore markdown syntax, formatting symbols (like #, *, -, [], (), etc.), and technical markup issues.
-Provide scores out of 100 and up to 3 suggestions for improving the actual writing.
-Do not comment on markdown syntax, formatting, or technical markup - only the writing quality.
+    let analysisSection = '';
+    if (analysisContext) {
+        const issuesSummary = analysisContext.issues
+            .map(i => `${i.type}: ${i.count}`)
+            .join(', ');
+        analysisSection = `
+The text has been analyzed with these current metrics:
+- Readability Score: ${analysisContext.score}/100
+- Grade Level: ${analysisContext.gradeLevel} (Coleman-Liau Index)
+- Flesch Reading Ease: ${analysisContext.fleschScore}/100
+- Detected issues: ${issuesSummary || 'none'}
 
-Format your response exactly like this:
+Your feedback should specifically target improving these metrics. For example, if the grade level is high, suggest simplifying vocabulary or shortening sentences. If passive voice count is high, highlight specific instances to rewrite.
+`;
+    }
+
+    const prompt = `You are an expert writing coach. Evaluate the following text for prose quality—ignore markdown syntax, formatting symbols, and technical markup.
+${analysisSection}
+Provide:
+1. Scores (0-100) for Grammar, Clarity, and Overall quality
+2. Up to 3 brief suggestions (one line each) ordered by severity (most critical first)
+3. Detailed feedback points with specific issues and fixes, categorized by type
+4. Any weak arguments or unsupported claims
+
+Format your response EXACTLY like this:
 Grammar: [score]
 Clarity: [score]
 Overall: [score]
 Suggestions:
-- [suggestion1]
-- [suggestion2]
-- [suggestion3]
+- [brief suggestion 1]
+- [brief suggestion 2]
+- [brief suggestion 3]
+DetailedFeedback: (JSON array)
+[
+  {
+    "category": "style|clarity|argument|structure|word-choice",
+    "severity": "high|medium|low",
+    "issue": "specific problem found",
+    "suggestion": "how to fix it"
+  }
+]
+WeakArguments: (JSON array)
+["weak argument or unsupported claim 1", "weak argument or unsupported claim 2"]
 
 Text:
 ${text}`;
@@ -231,7 +278,9 @@ ${text}`;
                     model,
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.7,
-                    max_tokens: 500,
+                    // Increased from 500 to 1500 to accommodate detailed feedback
+                    // This triples API costs but provides comprehensive analysis
+                    max_tokens: 1500,
                 }),
             });
 
@@ -252,7 +301,9 @@ ${text}`;
                 },
                 body: JSON.stringify({
                     model,
-                    max_tokens: 500,
+                    // Increased from 500 to 1500 to accommodate detailed feedback
+                    // This triples API costs but provides comprehensive analysis
+                    max_tokens: 1500,
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.7,
                 }),
@@ -289,22 +340,121 @@ function parseEvaluationResponse(response: string): EvaluationResult {
 
     let grammar = 0, clarity = 0, overall = 0;
     const suggestions: string[] = [];
-    let inSuggestions = false;
+    const detailedFeedback: FeedbackPoint[] = [];
+    const weakArguments: string[] = [];
+    let currentSection: 'none' | 'suggestions' | 'detailed' | 'weak' = 'none';
+    let jsonBuffer = '';
 
     for (const line of lines) {
         const lower = line.toLowerCase();
+
+        // Parse scores
         if (lower.startsWith('grammar:')) {
             grammar = parseInt(line.split(':')[1]?.trim() || '0') || 0;
+            currentSection = 'none';
         } else if (lower.startsWith('clarity:')) {
             clarity = parseInt(line.split(':')[1]?.trim() || '0') || 0;
+            currentSection = 'none';
         } else if (lower.startsWith('overall:')) {
             overall = parseInt(line.split(':')[1]?.trim() || '0') || 0;
+            currentSection = 'none';
         } else if (lower.startsWith('suggestions:')) {
-            inSuggestions = true;
-        } else if (inSuggestions && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
-            const suggestion = line.replace(/^[-•\d]+\.\s*|^-\s+/, '').trim();
-            if (suggestion) suggestions.push(suggestion);
+            currentSection = 'suggestions';
+        } else if (lower.startsWith('detailedfeedback:')) {
+            currentSection = 'detailed';
+            jsonBuffer = '';
+        } else if (lower.startsWith('weakarguments:')) {
+            // First try to parse any accumulated JSON from detailedFeedback
+            if (currentSection === 'detailed' && jsonBuffer) {
+                try {
+                    const parsed = JSON.parse(jsonBuffer);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach((item) => {
+                            if (item.issue && item.suggestion) {
+                                const validCategory = ['style', 'clarity', 'argument', 'structure', 'word-choice']
+                                    .includes(item.category?.toLowerCase()) ? item.category.toLowerCase() : 'style';
+                                const validSeverity = ['high', 'medium', 'low']
+                                    .includes(item.severity?.toLowerCase()) ? item.severity.toLowerCase() : 'medium';
+
+                                if (!['style', 'clarity', 'argument', 'structure', 'word-choice'].includes(item.category?.toLowerCase())) {
+                                    console.warn(`[AI Parse] Unrecognized category: ${item.category}, defaulting to 'style'`);
+                                }
+
+                                detailedFeedback.push({
+                                    category: validCategory as FeedbackPoint['category'],
+                                    severity: validSeverity as FeedbackPoint['severity'],
+                                    issue: item.issue,
+                                    suggestion: item.suggestion,
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('[AI Parse] Failed to parse DetailedFeedback JSON:', e);
+                    console.error('[AI Parse] JSON buffer was:', jsonBuffer);
+                }
+            }
+            currentSection = 'weak';
+            jsonBuffer = '';
+        } else if (currentSection === 'detailed' && (line.startsWith('[') || line.startsWith('{') || jsonBuffer)) {
+            // Accumulate JSON for detailed feedback
+            jsonBuffer += line;
+        } else if (currentSection === 'weak' && (line.startsWith('[') || jsonBuffer)) {
+            // Accumulate JSON for weak arguments
+            jsonBuffer += line;
+        } else if (currentSection === 'suggestions' && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
+            const content = line.replace(/^[-•\d]+\.\s*|^-\s+/, '').trim();
+            if (content) suggestions.push(content);
         }
+    }
+
+    // Parse any remaining JSON buffer for detailed feedback
+    if (currentSection === 'detailed' && jsonBuffer) {
+        try {
+            const parsed = JSON.parse(jsonBuffer);
+            if (Array.isArray(parsed)) {
+                parsed.forEach((item) => {
+                    if (item.issue && item.suggestion) {
+                        const validCategory = ['style', 'clarity', 'argument', 'structure', 'word-choice']
+                            .includes(item.category?.toLowerCase()) ? item.category.toLowerCase() : 'style';
+                        const validSeverity = ['high', 'medium', 'low']
+                            .includes(item.severity?.toLowerCase()) ? item.severity.toLowerCase() : 'medium';
+
+                        if (!['style', 'clarity', 'argument', 'structure', 'word-choice'].includes(item.category?.toLowerCase())) {
+                            console.warn(`[AI Parse] Unrecognized category: ${item.category}, defaulting to 'style'`);
+                        }
+
+                        detailedFeedback.push({
+                            category: validCategory as FeedbackPoint['category'],
+                            severity: validSeverity as FeedbackPoint['severity'],
+                            issue: item.issue,
+                            suggestion: item.suggestion,
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('[AI Parse] Failed to parse DetailedFeedback JSON:', e);
+            console.error('[AI Parse] JSON buffer was:', jsonBuffer);
+        }
+    }
+
+    // Parse any remaining JSON buffer for weak arguments
+    if (currentSection === 'weak' && jsonBuffer) {
+        try {
+            const parsed = JSON.parse(jsonBuffer);
+            if (Array.isArray(parsed)) {
+                weakArguments.push(...parsed.filter(item => typeof item === 'string'));
+            }
+        } catch (e) {
+            console.error('[AI Parse] Failed to parse WeakArguments JSON:', e);
+            console.error('[AI Parse] JSON buffer was:', jsonBuffer);
+        }
+    }
+
+    // Log parsing summary
+    if (detailedFeedback.length === 0 && weakArguments.length === 0) {
+        console.warn('[AI Parse] No detailed feedback or weak arguments parsed from AI response');
     }
 
     return {
@@ -314,5 +464,7 @@ function parseEvaluationResponse(response: string): EvaluationResult {
             overall: Math.min(100, Math.max(0, overall))
         },
         suggestions: suggestions.slice(0, 3),
+        detailedFeedback: detailedFeedback.length > 0 ? detailedFeedback : undefined,
+        weakArguments: weakArguments.length > 0 ? weakArguments : undefined,
     };
 }
