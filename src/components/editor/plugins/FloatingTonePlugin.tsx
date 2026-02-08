@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getSelection, $isRangeSelection } from "lexical";
+import { $patchStyleText } from "@lexical/selection";
 import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { TONE_OPTIONS, ToneId, changeToneWithSettings } from "@/lib/tone";
@@ -164,6 +165,10 @@ export function FloatingTonePlugin() {
                 if ($isRangeSelection(selection) && !selection.isCollapsed()) {
                     // Verify selection is still valid before replacing
                     selection.insertRawText(result.text);
+
+                    // Clear font-family to reset to default (IBM Plex Mono)
+                    // This prevents the tone-changed text from inheriting custom fonts
+                    $patchStyleText(selection, { 'font-family': null });
                 } else {
                     // Selection changed during async operation
                     showToast("Selection changed. Please try again.", "error");
